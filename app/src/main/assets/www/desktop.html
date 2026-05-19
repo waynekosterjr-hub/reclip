@@ -216,6 +216,7 @@
       mode = next;
       document.getElementById('modeVideo').classList.toggle('active', mode === 'video');
       document.getElementById('modeAudio').classList.toggle('active', mode === 'audio');
+      syncModeControls();
       renderQuality();
     }
     function setProfile(btn) {
@@ -241,15 +242,31 @@
     }
     function renderQuality() {
       const wrap = document.getElementById('qualityPicker');
-      if (mode !== 'video' || !fetched[0] || !Array.isArray(fetched[0].formats)) {
+      if (mode !== 'video') {
         wrap.classList.add('hidden');
         return;
       }
       wrap.classList.remove('hidden');
+      if (!fetched[0] || !Array.isArray(fetched[0].formats) || !fetched[0].formats.length) {
+        wrap.innerHTML = '<p class="section-label">Video Quality</p><button class="active" type="button">Best available<small>Fetch a URL to load source presets</small></button>';
+        return;
+      }
       wrap.innerHTML = '<p class="section-label">Video Quality</p>' + fetched[0].formats.slice(0, 4).map(f => {
         const active = selectedFormat[0] === f.id ? 'active' : '';
         return `<button class="${active}" onclick="selectQuality('${escapeAttr(f.id || '')}')">${escapeHtml(f.label || f.height || 'Best')}<small>${escapeHtml(f.bitrate || f.ext || 'available')}</small></button>`;
       }).join('');
+    }
+
+    function syncModeControls() {
+      const profile = document.getElementById('profilePicker');
+      const quality = document.getElementById('qualityPicker');
+      if (mode === 'video') {
+        profile.classList.add('hidden');
+        quality.classList.remove('hidden');
+      } else {
+        profile.classList.remove('hidden');
+        quality.classList.add('hidden');
+      }
     }
     function selectQuality(id) {
       selectedFormat[0] = id;
@@ -346,6 +363,8 @@
     }
     function escapeAttr(value) { return escapeHtml(value).replace(/`/g, '&#96;'); }
     refresh();
+    syncModeControls();
+    renderQuality();
     setInterval(() => { if (token) refresh(); }, 8000);
   </script>
 </body>
