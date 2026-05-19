@@ -1,0 +1,74 @@
+name: README Governance Check
+
+on:
+  pull_request:
+    branches: [ main, android, Codex ]
+  push:
+    branches: [ "**" ]
+    tags-ignore: [ "**" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  readme-policy:
+    name: Enforce README Updates for Material Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine diff base
+        id: base
+        shell: bash
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            echo "base_ref=origin/${{ github.base_ref }}" >> "$GITHUB_OUTPUT"
+          else
+            if git rev-parse HEAD^ >/dev/null 2>&1; then
+              echo "base_ref=HEAD^" >> "$GITHUB_OUTPUT"
+            else
+              echo "base_ref=HEAD" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Check README governance policy
+        shell: bash
+        run: |
+          BASE_REF="${{ steps.base.outputs.base_ref }}"
+          CHANGED="$(git diff --name-only "${BASE_REF}" HEAD)"
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          if [ -z "$CHANGED" ]; then
+            echo "No changed files detected."
+            exit 0
+          fi
+
+          PRODUCT_CHANGED=0
+          README_CHANGED=0
+
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            case "$file" in
+              README.md) README_CHANGED=1 ;;
+            esac
+            case "$file" in
+              app/src/main/assets/www/*|app/src/main/java/com/reclip/app/*|app/src/main/python/reclip_engine.py|app/src/main/java/com/reclip/app/billing/*)
+                PRODUCT_CHANGED=1
+                ;;
+            esac
+          done <<< "$CHANGED"
+
+          if [ "$PRODUCT_CHANGED" -eq 1 ] && [ "$README_CHANGED" -eq 0 ]; then
+            echo "README governance failure: material product changes detected without README.md update."
+            echo "Please update README.md with relevant feature/behavior/build notes."
+            exit 1
+          fi
+
+          echo "README governance check passed."

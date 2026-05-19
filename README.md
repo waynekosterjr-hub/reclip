@@ -50,6 +50,15 @@ adb devices -l
 adb -t <transport_id> install -r app\build\outputs\apk\debug\app-debug.apk
 ```
 
+## 🧪 Beta Releases
+
+- ReClip Beta is published via **GitHub Pre-release**.
+- Workflow: `.github/workflows/beta-release.yml`
+- Tag pattern: `v*-beta.*` (example: `v1.1.0-beta.1`)
+- Attached artifacts:
+  - `ReClip-beta-debug.apk`
+  - `ReClip-beta-release-unsigned.apk`
+
 ## ✅ Quick Validation
 
 1. Paste/share URL and verify auto-fetch.
@@ -75,3 +84,5 @@ Before each push, refresh this README summary to reflect:
 - any new Settings/Desktop behavior.
 
 That keeps `Codex` branch docs aligned with shipped behavior.
+
+Material product changes that touch UI, runtime/server, engine, or billing paths are expected to include a README update. This is enforced by `.github/workflows/readme-policy.yml`.
