@@ -1,6 +1,11 @@
 # ReClip Serverless Media Engine
 
-This README is generated from the pages of `ReClip_Serverless_Media_Engine_(2).pdf` for the Codex branch.
+This README is generated from `docs/readme/ReClip_Serverless_Media_Engine.pdf`. To refresh it, run:
+
+```powershell
+py -3 -m pip install pypdfium2 pillow
+py -3 scripts/update_readme_images.py
+```
 
 <p align="center"><img src="docs/screenshots/serverless-readme/page-01.jpg" width="900" alt="ReClip Serverless Media Engine page 1" /></p>
 <p align="center"><img src="docs/screenshots/serverless-readme/page-02.jpg" width="900" alt="ReClip Serverless Media Engine page 2" /></p>

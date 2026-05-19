@@ -48,6 +48,7 @@
     --ease: cubic-bezier(0.16, 1, 0.3, 1);
     --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
     --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ui-text-scale: 1.12;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -185,23 +186,27 @@
   .header {
     padding: 12px 18px 8px;
     display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
   }
   .logo-wrap {
     display: flex; align-items: center; gap: 11px;
     animation: slide-in-left 0.7s var(--ease) both;
+    min-width: 0;
+    flex: 1 1 auto;
   }
   .logo {
-    width: 38px; height: 38px;
+    width: 66px; height: 66px;
     position: relative;
     display: flex; align-items: center; justify-content: center;
-    border-radius: 50%;
-    box-shadow: 0 6px 24px var(--coral-glow);
+    filter: drop-shadow(0 8px 20px rgba(255, 46, 154, 0.32));
   }
   .logo img { width: 100%; height: 100%; object-fit: contain; }
+  .brand { min-width: 0; }
   .brand h1 {
     font-family: var(--display);
     font-weight: 400;
-    font-size: 22px;
+    font-size: 34px;
     letter-spacing: -0.5px;
     line-height: 1;
     color: var(--text);
@@ -213,11 +218,11 @@
   }
   .brand .sub {
     font-family: var(--mono);
-    font-size: 8px;
+    font-size: 13px;
     font-weight: 500;
-    letter-spacing: 2px;
+    letter-spacing: 2.6px;
     color: var(--text-faint);
-    margin-top: 2px;
+    margin-top: 4px;
     text-transform: uppercase;
   }
 
@@ -313,6 +318,8 @@
     align-items: center;
     gap: 8px;
     animation: slide-in-right 0.7s var(--ease) both;
+    min-width: 0;
+    flex: 0 1 auto;
   }
   .header-btn {
     width: 36px; height: 36px;
@@ -419,7 +426,7 @@
   .sheet-title {
     font-family: var(--display);
     font-style: italic;
-    font-size: 24px;
+    font-size: calc(24px * var(--ui-text-scale));
     font-weight: 400;
     color: var(--text);
     letter-spacing: -0.5px;
@@ -427,7 +434,7 @@
   }
   .sheet-count {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: calc(10px * var(--ui-text-scale));
     font-weight: 500;
     color: var(--text-mute);
     letter-spacing: 1px;
@@ -467,7 +474,7 @@
     border: 1px solid var(--border);
     color: var(--text-mute);
     font-family: var(--sans);
-    font-size: 12px;
+    font-size: calc(12px * var(--ui-text-scale));
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s var(--ease);
@@ -558,7 +565,7 @@
     overflow: hidden;
   }
   .dl-title {
-    font-size: 13px;
+    font-size: calc(13px * var(--ui-text-scale));
     font-weight: 600;
     color: var(--text);
     line-height: 1.3;
@@ -574,7 +581,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 10px;
+    font-size: calc(10px * var(--ui-text-scale));
     color: var(--text-mute);
   }
   .dl-detail .dot {
@@ -633,7 +640,7 @@
     margin-bottom: 6px;
   }
   .sheet-empty-text {
-    font-size: 12px;
+    font-size: calc(12px * var(--ui-text-scale));
     line-height: 1.5;
     color: var(--text-mute);
     max-width: 240px;
@@ -663,7 +670,7 @@
     animation: hero-rise 1s var(--ease) 0.2s both;
   }
   .hero-sub {
-    font-size: 13px;
+    font-size: calc(13px * var(--ui-text-scale));
     color: var(--text-mute);
     margin: 12px 0 18px;
     font-weight: 400;
@@ -709,7 +716,7 @@
     color: currentColor;
   }
   .fmt-btn .fmt-label {
-    font-size: 13px;
+    font-size: calc(13px * var(--ui-text-scale));
     font-weight: 600;
     color: currentColor;
     letter-spacing: -0.2px;
@@ -746,11 +753,11 @@
     color: var(--text-mute);
   }
   .audio-profile-pill .ap-name {
-    font-size: 12px; font-weight: 700; letter-spacing: -0.1px;
+    font-size: calc(12px * var(--ui-text-scale)); font-weight: 700; letter-spacing: -0.1px;
     color: var(--text-soft);
   }
   .audio-profile-pill .ap-desc {
-    font-size: 10px; color: var(--text-faint); line-height: 1.3;
+    font-size: calc(10px * var(--ui-text-scale)); color: var(--text-faint); line-height: 1.35;
   }
   .audio-profile-pill.active {
     background: linear-gradient(135deg, rgba(231,24,133,0.18), rgba(161,58,240,0.18));
@@ -829,7 +836,7 @@
     outline: none;
     color: var(--text);
     font-family: var(--mono);
-    font-size: 14px;
+    font-size: calc(14px * var(--ui-text-scale));
     font-weight: 400;
     line-height: 1.6;
     resize: none;
@@ -882,7 +889,7 @@
   }
   .input-card.collapsed .input-summary { display: flex; }
   .input-summary-text {
-    font-size: 12px;
+    font-size: calc(12px * var(--ui-text-scale));
     color: var(--text-mute);
   }
   .input-summary-btn {
@@ -891,7 +898,7 @@
     color: var(--text-soft);
     border-radius: 10px;
     padding: 7px 10px;
-    font-size: 12px;
+    font-size: calc(12px * var(--ui-text-scale));
     font-weight: 600;
     cursor: pointer;
   }
@@ -903,7 +910,7 @@
     border: none;
     color: var(--text-soft);
     font-family: var(--sans);
-    font-size: 14px;
+    font-size: calc(14px * var(--ui-text-scale));
     font-weight: 500;
     cursor: pointer;
     display: flex;
@@ -954,7 +961,7 @@
   }
   .section-label .text {
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: calc(9px * var(--ui-text-scale));
     font-weight: 600;
     letter-spacing: 2.5px;
     color: var(--text-mute);
@@ -1015,7 +1022,7 @@
     backdrop-filter: blur(10px);
     color: white;
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: calc(10px * var(--ui-text-scale));
     font-weight: 600;
     padding: 3px 8px;
     border-radius: 5px;
@@ -1026,7 +1033,7 @@
     padding: 11px 13px 13px;
   }
   .card-title {
-    font-size: 13px;
+    font-size: calc(13px * var(--ui-text-scale));
     font-weight: 600;
     line-height: 1.35;
     color: var(--text);
@@ -1038,14 +1045,14 @@
     letter-spacing: -0.1px;
   }
   .card-uploader {
-    font-size: 11px;
+    font-size: calc(11px * var(--ui-text-scale));
     color: var(--text-mute);
     margin-bottom: 10px;
     font-weight: 500;
   }
 
   .quality-picker-label {
-    font-size: 10px;
+    font-size: calc(10px * var(--ui-text-scale));
     font-family: var(--mono);
     letter-spacing: 1.4px;
     text-transform: uppercase;
@@ -1068,7 +1075,7 @@
     background: linear-gradient(135deg, var(--coral) 0%, var(--violet) 100%);
     color: white;
     font-family: var(--sans);
-    font-size: 13px;
+    font-size: calc(13px * var(--ui-text-scale));
     font-weight: 600;
     cursor: pointer;
     display: flex;
@@ -1133,7 +1140,7 @@
     border: 1px solid var(--border);
     color: var(--text-soft);
     font-family: var(--sans);
-    font-size: 11px;
+    font-size: calc(11px * var(--ui-text-scale));
     font-weight: 500;
     cursor: pointer;
     display: flex;
@@ -1194,6 +1201,22 @@
     margin: 0 auto 14px;
   }
 
+  .tiles-module {
+    margin-top: 12px;
+    overflow: hidden;
+    max-height: var(--tiles-max-height, 1200px);
+    opacity: 1;
+    transform: translateY(0);
+    transition: max-height 0.45s var(--ease), opacity 0.28s ease, transform 0.28s ease, margin-top 0.35s var(--ease);
+  }
+  .tiles-module.collapsed {
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-10px);
+    margin-top: 0;
+    pointer-events: none;
+  }
+
   /* Feature stat cards */
   .feat-grid {
     display: grid;
@@ -1230,7 +1253,7 @@
   .feat-icon.aqua { color: var(--aqua); background: rgba(13,163,239,0.12); }
   .feat-icon.violet { color: var(--violet); background: rgba(161,58,240,0.12); }
   .feat-title {
-    font-size: 11px;
+    font-size: calc(11px * var(--ui-text-scale));
     font-weight: 700;
     color: var(--text);
     line-height: 1.2;
@@ -1238,7 +1261,7 @@
     letter-spacing: -0.1px;
   }
   .feat-sub {
-    font-size: 9.5px;
+    font-size: calc(9.5px * var(--ui-text-scale));
     color: var(--text-mute);
     line-height: 1.3;
   }
@@ -1263,7 +1286,7 @@
   }
   .supported-strip .header-row .label {
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: calc(9px * var(--ui-text-scale));
     font-weight: 600;
     letter-spacing: 1.8px;
     color: var(--text-mute);
@@ -1271,7 +1294,7 @@
   }
   .supported-strip .header-row .count {
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: calc(9px * var(--ui-text-scale));
     color: var(--aqua);
     font-weight: 700;
     letter-spacing: 1px;
@@ -1287,7 +1310,7 @@
     background: rgba(255,255,255,0.04);
     border: 1px solid var(--border);
     font-family: var(--mono);
-    font-size: 9.5px;
+    font-size: calc(9.5px * var(--ui-text-scale));
     font-weight: 500;
     color: var(--text-soft);
     letter-spacing: 0.3px;
@@ -1306,6 +1329,127 @@
     to { opacity: 1; transform: scale(1) translateY(0); }
   }
 
+  .settings-group {
+    margin-bottom: 16px;
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.025);
+  }
+  .settings-group-title {
+    font-family: var(--mono);
+    font-size: calc(10px * var(--ui-text-scale));
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-mute);
+    margin-bottom: 10px;
+  }
+  .settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .settings-row-meta {
+    flex: 1;
+    min-width: 0;
+  }
+  .settings-row-title {
+    font-size: calc(13px * var(--ui-text-scale));
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 3px;
+  }
+  .settings-row-sub {
+    font-size: calc(11px * var(--ui-text-scale));
+    color: var(--text-mute);
+    line-height: 1.4;
+  }
+  .switch-btn {
+    width: 52px;
+    height: 30px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.08);
+    position: relative;
+    cursor: pointer;
+    transition: all 0.25s var(--ease);
+    flex-shrink: 0;
+  }
+  .switch-btn .switch-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.8);
+    transition: all 0.25s var(--ease);
+  }
+  .switch-btn.on {
+    background: linear-gradient(135deg, var(--coral), var(--violet));
+    border-color: transparent;
+    box-shadow: 0 0 16px var(--coral-glow);
+  }
+  .switch-btn.on .switch-knob {
+    left: 27px;
+    background: white;
+  }
+
+  .desktop-mode-panel {
+    margin-top: 14px;
+    padding: 16px;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 18px;
+    background: rgba(255,255,255,.035);
+    display: none;
+    gap: 12px;
+  }
+
+  .desktop-mode-panel.visible {
+    display: grid;
+  }
+
+  .desktop-mode-grid {
+    display: grid;
+    gap: 10px;
+  }
+
+  .desktop-mode-value {
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(0,0,0,.18);
+    border: 1px solid rgba(255,255,255,.07);
+  }
+
+  .desktop-mode-value b {
+    display: block;
+    color: var(--text);
+    font-size: calc(12px * var(--ui-text-scale));
+    margin-bottom: 4px;
+  }
+
+  .desktop-mode-value span {
+    color: var(--text-mute);
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    overflow-wrap: anywhere;
+  }
+
+  .settings-mini-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .settings-mini-btn {
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 14px;
+    background: rgba(255,255,255,.06);
+    color: var(--text);
+    font-weight: 900;
+    padding: 12px 14px;
+  }
+
   /* ─── Download All ─── */
   .dl-all {
     margin: 2px 18px 16px;
@@ -1316,7 +1460,7 @@
     border: 1.5px dashed var(--border-strong);
     color: var(--coral);
     font-family: var(--sans);
-    font-size: 13px;
+    font-size: calc(13px * var(--ui-text-scale));
     font-weight: 600;
     cursor: pointer;
     display: flex;
@@ -1355,7 +1499,7 @@
     color: var(--text);
     padding: 12px 22px;
     border-radius: 100px;
-    font-size: 13px;
+    font-size: calc(13px * var(--ui-text-scale));
     font-weight: 500;
     z-index: 999;
     opacity: 0;
@@ -1464,11 +1608,124 @@
   /* ── Tablet: single column, scaled up ──
      Gated on min-height so a phone in landscape (wide but short) does
      NOT trip this and instead keeps the phone / landscape rules. ── */
+  /* Compact phones: preserve the brand, compress secondary chrome. */
+  @media (max-width: 430px) {
+    body { max-width: 100%; }
+
+    .header {
+      padding: 10px 12px 6px;
+      gap: 8px;
+    }
+    .logo-wrap { gap: 8px; }
+    .logo { width: 52px; height: 52px; }
+    .brand h1 { font-size: 29px; }
+    .brand .sub {
+      font-size: 10px;
+      letter-spacing: 1.8px;
+      margin-top: 3px;
+    }
+    .header-actions { gap: 5px; }
+    .header-btn { width: 34px; height: 34px; }
+    .pro-pill {
+      padding: 6px 8px;
+      font-size: 8.5px;
+    }
+    .status-pill {
+      padding: 6px 8px;
+      max-width: 92px;
+      font-size: 8px;
+    }
+
+    .hero { padding: 12px 14px 14px; }
+    .hero-title, .hero-title-2 {
+      font-size: 34px;
+      letter-spacing: -0.8px;
+    }
+    .hero-sub {
+      margin: 10px 0 14px;
+      font-size: calc(12px * var(--ui-text-scale));
+    }
+    .formats { margin-bottom: 12px; }
+    .fmt-btn { padding: 10px 12px; }
+    .audio-profile-pills,
+    .feat-grid {
+      gap: 7px;
+    }
+    .audio-profile-pill,
+    .feat {
+      padding: 10px 11px;
+    }
+    .url-field { padding: 15px 15px; }
+    .url-input {
+      min-height: 58px;
+      font-size: calc(13px * var(--ui-text-scale));
+    }
+    .footer {
+      padding: 10px 14px 12px;
+      gap: 8px;
+    }
+    .footer-meta { display: none; }
+  }
+
+  /* Very narrow phones: let the status pill become a tiny health indicator. */
+  @media (max-width: 365px) {
+    .logo { width: 46px; height: 46px; }
+    .brand h1 { font-size: 26px; }
+    .brand .sub {
+      font-size: 8.5px;
+      letter-spacing: 1.35px;
+    }
+    .status-pill {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      justify-content: center;
+      border-radius: 50%;
+    }
+    .status-pill span:last-child { display: none; }
+    .header-btn { width: 32px; height: 32px; }
+    .pro-pill #proPillLabel {
+      max-width: 34px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .hero-title, .hero-title-2 { font-size: 31px; }
+    .audio-profile-pills,
+    .video-quick-grid,
+    .feat-grid {
+      grid-template-columns: 1fr;
+    }
+    .supported { gap: 5px; }
+    .tag { padding: 4px 8px; }
+  }
+
+  /* Short portrait devices: allow the top controls to scroll instead of clipping. */
+  @media (orientation: portrait) and (max-height: 740px) {
+    .app-top {
+      flex: 0 1 auto;
+      min-height: 0;
+      max-height: 68dvh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    .app-content { min-height: 150px; }
+    .hero {
+      padding-top: 8px;
+      padding-bottom: 12px;
+    }
+    .hero-title, .hero-title-2 { font-size: 30px; }
+    .hero-sub { display: none; }
+    .tiles-module .supported-strip { display: none; }
+  }
+
   @media (min-width: 640px) and (max-width: 1023px) and (min-height: 600px) {
     body { max-width: 760px; }
 
     .header { padding: 16px 28px 10px; }
-    .brand h1 { font-size: 26px; }
+    .logo { width: 74px; height: 74px; }
+    .brand h1 { font-size: 38px; }
+    .brand .sub { font-size: 14px; }
     .header-btn { width: 42px; height: 42px; }
 
     .hero { padding: 20px 28px 22px; }
@@ -1556,13 +1813,53 @@
   @media (orientation: landscape) and (max-height: 480px) {
     html, body { overflow-y: auto; height: auto; min-height: 100dvh; }
     .app-shell { overflow: visible; height: auto; min-height: 100dvh; }
+    .app-top { overflow: visible; max-height: none; }
     .app-content { overflow: visible; flex: 0 0 auto; }
 
     .header { padding: 10px 18px 6px; }
+    .logo { width: 48px; height: 48px; }
+    .brand h1 { font-size: 28px; }
+    .brand .sub { font-size: 11px; }
+    .status-pill { max-width: 120px; }
 
     .hero { padding: 10px 20px 14px; }
     .hero-title, .hero-title-2 { font-size: 30px; }
-    .hero-sub { margin: 8px 0 12px; font-size: 12px; }
+    .hero-sub { margin: 8px 0 12px; font-size: calc(12px * var(--ui-text-scale)); }
+    .audio-profile-pills,
+    .video-quick-grid,
+    .feat-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 7px;
+    }
+    .audio-profile-pill,
+    .feat {
+      padding: 9px 10px;
+      min-height: 68px;
+    }
+    .supported-strip { display: none; }
+    .result-card, .skel-card { margin: 0 20px 12px; }
+    .section-label { margin: 10px 20px 8px; }
+  }
+
+  @media (orientation: landscape) and (max-height: 380px) {
+    .hero-title,
+    .hero-title-2,
+    .hero-sub {
+      display: none;
+    }
+    .formats { margin-bottom: 8px; }
+    .input-card { border-radius: var(--r-md); }
+    .url-input { min-height: 44px; }
+    .footer { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 </style>
 </head>
@@ -1599,6 +1896,12 @@
         </svg>
         <span class="header-btn-badge" id="downloadsBadge" style="display:none">0</span>
       </button>
+      <button class="header-btn" id="settingsBtn" onclick="openSettings()" aria-label="Open settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.33 1V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-.33-1A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1-.33H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1-.33A1.65 1.65 0 0 0 4.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 8 4.6a1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 0 .33-1V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 .33 1 1.65 1.65 0 0 0 1 .6 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 8c0 .38.14.74.39 1.03.25.29.59.48.97.55H21a2 2 0 1 1 0 4h-.24a1.65 1.65 0 0 0-.97.55c-.25.29-.39.65-.39 1.03z"/>
+        </svg>
+      </button>
       <div class="status-pill" id="status" onclick="openRuntimeInfo()" role="button" aria-label="Runtime status">
         <span class="status-dot" id="statusDot"></span>
         <span id="statusLabel">Ready</span>
@@ -1612,7 +1915,7 @@
     <div class="hero">
       <h2 class="hero-title">Capture</h2>
       <h2 class="hero-title-2">anything, instantly.</h2>
-      <p class="hero-sub">Paste a video URL from any platform. Everything happens on-device.</p>
+      <p class="hero-sub">Paste a media URL from any platform. Everything happens on-device.</p>
 
       <!-- Format toggle -->
       <div class="formats">
@@ -1698,6 +2001,114 @@
           </button>
         </div>
       </div>
+
+      <div class="tiles-module" id="tilesModule">
+        <p class="empty-text">Powerful local downloads — no servers, no logins, no tracking.</p>
+        <div class="feat-grid">
+          <div class="feat">
+            <div class="feat-icon coral">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2"/>
+                <line x1="8" y1="21" x2="16" y2="21"/>
+                <line x1="12" y1="17" x2="12" y2="21"/>
+              </svg>
+            </div>
+            <div class="feat-title">On-device</div>
+            <div class="feat-sub">Everything runs locally</div>
+          </div>
+          <div class="feat">
+            <div class="feat-icon aqua">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+            </div>
+            <div class="feat-title">Instant fetch</div>
+            <div class="feat-sub">yt-dlp under the hood</div>
+          </div>
+          <div class="feat">
+            <div class="feat-icon violet">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </div>
+            <div class="feat-title">Private</div>
+            <div class="feat-sub">No data leaves device</div>
+          </div>
+          <div class="feat">
+            <div class="feat-icon coral">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 18V5l12-2v13"/>
+                <circle cx="6" cy="18" r="3"/>
+                <circle cx="18" cy="16" r="3"/>
+              </svg>
+            </div>
+            <div class="feat-title">MP3 ready</div>
+            <div class="feat-sub">Audio extraction built-in</div>
+          </div>
+          <div class="feat">
+            <div class="feat-icon aqua">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                <polyline points="7.5 4.21 12 6.81 16.5 4.21"/>
+              </svg>
+            </div>
+            <div class="feat-title">Playlist smart</div>
+            <div class="feat-sub">YouTube + Spotify expansion</div>
+          </div>
+          <div class="feat">
+            <div class="feat-icon violet">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 3v18h18"/>
+                <path d="M7 14l3-3 3 2 4-5"/>
+              </svg>
+            </div>
+            <div class="feat-title">Quality control</div>
+            <div class="feat-sub">Persistent video + audio prefs</div>
+          </div>
+          <div class="feat">
+            <div class="feat-icon coral">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82"/>
+                <path d="M4.6 9a1.65 1.65 0 0 0-.33-1.82"/>
+              </svg>
+            </div>
+            <div class="feat-title">Runtime tools</div>
+            <div class="feat-sub">Diagnostics + local paths</div>
+          </div>
+          <div class="feat">
+            <div class="feat-icon aqua">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="16" rx="2"/>
+                <line x1="7" y1="9" x2="17" y2="9"/>
+                <line x1="7" y1="13" x2="14" y2="13"/>
+              </svg>
+            </div>
+            <div class="feat-title">Metadata rich</div>
+            <div class="feat-sub">Cover art + core tag embedding</div>
+          </div>
+        </div>
+        <div class="supported-strip">
+          <div class="header-row">
+            <span class="label">Supported</span>
+            <span class="count">1000+ SITES</span>
+          </div>
+          <div class="supported">
+            <span class="tag">YouTube</span>
+            <span class="tag">YouTube Music</span>
+            <span class="tag">Spotify</span>
+            <span class="tag">TikTok</span>
+            <span class="tag">Instagram</span>
+            <span class="tag">X / Twitter</span>
+            <span class="tag">Reddit</span>
+            <span class="tag">Twitch</span>
+            <span class="tag">Vimeo</span>
+            <span class="tag">SoundCloud</span>
+            <span class="tag">+ more</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1781,20 +2192,92 @@
   <div class="sheet-list" id="runtimeList"></div>
 </div>
 
+<div class="sheet-backdrop" id="settingsBackdrop" onclick="closeSettings()"></div>
+<div class="sheet" id="settingsSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title-wrap">
+      <h2 class="sheet-title">Settings</h2>
+      <span class="sheet-count">Diagnostics First</span>
+    </div>
+    <div class="sheet-actions">
+      <button class="sheet-icon-btn" onclick="closeSettings()" title="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+  <div class="sheet-list">
+    <div class="settings-group">
+      <div class="settings-group-title">Workflow</div>
+      <div class="settings-row">
+        <div class="settings-row-meta">
+          <div class="settings-row-title">Auto-fetch on paste/share</div>
+          <div class="settings-row-sub">Automatically fetch metadata after URLs are pasted or shared in.</div>
+        </div>
+        <button class="switch-btn" id="autoFetchToggle" onclick="toggleAutoFetch()" aria-label="Toggle auto fetch">
+          <span class="switch-knob"></span>
+        </button>
+      </div>
+    </div>
+    <div class="settings-group">
+      <div class="settings-group-title">Desktop Mode</div>
+      <div class="settings-row">
+        <div class="settings-row-meta">
+          <div class="settings-row-title">Phone-hosted LAN dashboard</div>
+          <div class="settings-row-sub">Start a local desktop page on Wi-Fi with PIN pairing.</div>
+        </div>
+        <button class="switch-btn" id="desktopModeToggle" onclick="toggleDesktopMode()" aria-label="Toggle desktop mode">
+          <span class="switch-knob"></span>
+        </button>
+      </div>
+      <div class="desktop-mode-panel" id="desktopModePanel">
+        <div class="desktop-mode-grid">
+          <div class="desktop-mode-value">
+            <b>Connection URL</b>
+            <span id="desktopModeUrl">off</span>
+          </div>
+          <div class="desktop-mode-value">
+            <b>Pairing PIN</b>
+            <span id="desktopModePin">------</span>
+          </div>
+          <div class="desktop-mode-value">
+            <b>Status</b>
+            <span id="desktopModeState">off</span>
+          </div>
+        </div>
+        <div class="settings-mini-actions">
+          <button class="settings-mini-btn" onclick="copyDesktopModeLink()">Copy Link</button>
+          <button class="settings-mini-btn" onclick="shareDesktopModeLink()">Share</button>
+        </div>
+      </div>
+    </div>
+    <div class="settings-group">
+      <div class="settings-group-title">Runtime Diagnostics</div>
+      <div id="settingsRuntimeList"></div>
+    </div>
+  </div>
+</div>
+
 <script>
   // ─── State ───
   const AUDIO_PROFILE_PREF_KEY = 'reclip_audio_profile_pref';
   const AUDIO_PROFILE_DEFAULT = 'mp3_320_cbr';
   const AUDIO_PROFILE_KEYS = ['mp3_320_cbr', 'mp3_v0_vbr', 'mp3_256_cbr', 'flac_lossless'];
   const VIDEO_QUALITY_PREF_KEY = 'reclip_video_quality_pref';
+  const AUTO_FETCH_PREF_KEY = 'reclip_auto_fetch_pref';
   let currentFormat = 'video';
   let currentAudioProfile = AUDIO_PROFILE_DEFAULT;
+  let autoFetchEnabled = true;
   let results = [];
   let downloadStates = {};
   let lastEngineStatus = null;
   let isUrlInputCollapsed = false;
   let hasSuccessfulFetch = false;
+  let isFetching = false;
   let activeFetchToken = 0;
+  let desktopServerStatus = { running: false };
   let callbackCounter = 0;
   const callbacks = {};
 
@@ -1819,6 +2302,12 @@
     }
   };
 
+  function cb(handler) {
+    const id = 'cb_' + (++callbackCounter);
+    callbacks[id] = handler;
+    return id;
+  }
+
   function isSpotifyUrl(url) {
     if (!url) return false;
     const lower = String(url).toLowerCase();
@@ -1840,6 +2329,126 @@
     if (isSpotifyUrl(url)) return true;
     if (isYouTubeMusicUrl(url) && isProUser) return true;
     return false;
+  }
+
+  function loadAutoFetchPreference() {
+    try {
+      const saved = localStorage.getItem(AUTO_FETCH_PREF_KEY);
+      autoFetchEnabled = saved == null ? true : saved !== '0';
+    } catch (e) {
+      autoFetchEnabled = true;
+    }
+  }
+
+  function saveAutoFetchPreference() {
+    try {
+      localStorage.setItem(AUTO_FETCH_PREF_KEY, autoFetchEnabled ? '1' : '0');
+    } catch (e) {}
+  }
+
+  function syncAutoFetchToggleUI() {
+    const toggle = document.getElementById('autoFetchToggle');
+    if (!toggle) return;
+    toggle.classList.toggle('on', !!autoFetchEnabled);
+  }
+
+  function toggleAutoFetch() {
+    autoFetchEnabled = !autoFetchEnabled;
+    saveAutoFetchPreference();
+    syncAutoFetchToggleUI();
+    showToast(autoFetchEnabled ? 'Auto-fetch enabled' : 'Auto-fetch disabled');
+  }
+
+  function renderDesktopModeStatus(status) {
+    desktopServerStatus = status || { running: false };
+    const running = !!desktopServerStatus.running;
+    const toggle = document.getElementById('desktopModeToggle');
+    const panel = document.getElementById('desktopModePanel');
+    if (toggle) toggle.classList.toggle('on', running);
+    if (panel) panel.classList.toggle('visible', running);
+    const urlEl = document.getElementById('desktopModeUrl');
+    const pinEl = document.getElementById('desktopModePin');
+    const stateEl = document.getElementById('desktopModeState');
+    if (urlEl) urlEl.textContent = running ? (desktopServerStatus.url || 'starting...') : 'off';
+    if (pinEl) pinEl.textContent = running ? (desktopServerStatus.pin || '------') : '------';
+    if (stateEl) {
+      const paired = desktopServerStatus.paired ? 'paired' : 'waiting for PIN';
+      stateEl.textContent = running
+        ? `${paired} - ${desktopServerStatus.activeJobs || 0} active job(s)`
+        : 'off';
+    }
+  }
+
+  function refreshDesktopModeStatus() {
+    if (!isNative() || typeof ReClip.getDesktopServerStatus !== 'function') {
+      renderDesktopModeStatus({ running: false });
+      return;
+    }
+    try {
+      renderDesktopModeStatus(JSON.parse(ReClip.getDesktopServerStatus()));
+    } catch (e) {
+      renderDesktopModeStatus({ running: false });
+    }
+  }
+
+  function toggleDesktopMode() {
+    if (!isNative() || typeof ReClip.setDesktopServerEnabled !== 'function') {
+      showToast('Desktop Mode requires the Android app', true);
+      return;
+    }
+    const enable = !desktopServerStatus.running;
+    const cbId = cb((res) => {
+      renderDesktopModeStatus(res);
+      document.getElementById('settingsRuntimeList').innerHTML = renderDiagnosticsRows().join('');
+      showToast(enable ? 'Desktop Mode is running' : 'Desktop Mode stopped');
+    });
+    try {
+      ReClip.setDesktopServerEnabled(enable, cbId);
+    } catch (e) {
+      showToast('Desktop Mode unavailable', true);
+    }
+  }
+
+  function copyDesktopModeLink() {
+    const value = desktopServerStatus?.url || '';
+    if (!value) return showToast('Desktop Mode is off', true);
+    try {
+      if (isNative() && typeof ReClip.copyText === 'function') ReClip.copyText(value);
+      else navigator.clipboard?.writeText(value);
+      showToast('Desktop link copied');
+    } catch (e) {
+      showToast(value);
+    }
+  }
+
+  function shareDesktopModeLink() {
+    const value = desktopServerStatus?.url || '';
+    if (!value) return showToast('Desktop Mode is off', true);
+    const text = `ReClip Desktop Mode: ${value}\nPIN: ${desktopServerStatus.pin || ''}`;
+    if (isNative() && typeof ReClip.shareText === 'function') ReClip.shareText(text);
+    else copyDesktopModeLink();
+  }
+
+  window.onDesktopServerChanged = function(status) {
+    renderDesktopModeStatus(status);
+  };
+
+  function shouldCollapseTiles() {
+    const raw = (document.getElementById('urlInput')?.value || '').trim();
+    if (raw) return true;
+    if (hasSuccessfulFetch) return true;
+    if (isFetching) return true;
+    return false;
+  }
+
+  function syncTopTilesVisibility() {
+    const module = document.getElementById('tilesModule');
+    if (!module) return;
+    const shouldCollapse = shouldCollapseTiles();
+    module.classList.toggle('collapsed', shouldCollapse);
+    if (!shouldCollapse) {
+      module.style.setProperty('--tiles-max-height', `${module.scrollHeight}px`);
+    }
   }
 
   function syncAudioProfilePickerVisibility() {
@@ -2003,7 +2612,8 @@
     if (shouldForceAudioFromShare(url)) {
       forceFormatAudio();
     }
-    fetchInfo();
+    if (autoFetchEnabled) fetchInfo();
+    else syncTopTilesVisibility();
   };
 
   function getDemoResponse(method, args) {
@@ -2069,6 +2679,7 @@
   }
 
   function autoFetchIfUrlPresent() {
+    if (!autoFetchEnabled) return;
     const raw = document.getElementById('urlInput').value.trim();
     if (!raw) return;
     const btn = document.getElementById('fetchBtn');
@@ -2090,6 +2701,7 @@
     results = [];
     downloadStates = {};
     hasSuccessfulFetch = false;
+    isFetching = false;
     syncFetchButtonVisibility();
     const btn = document.getElementById('fetchBtn');
     if (btn) {
@@ -2101,6 +2713,7 @@
     }
     renderResults();
     renderVideoQuickPicker();
+    syncTopTilesVisibility();
   }
 
   function updateUrlSummary() {
@@ -2115,6 +2728,7 @@
     updateUrlSummary();
     document.getElementById('inputCard').classList.add('collapsed');
     renderVideoQuickPicker();
+    syncTopTilesVisibility();
   }
 
   function expandUrlInput() {
@@ -2124,6 +2738,7 @@
     renderVideoQuickPicker();
     const input = document.getElementById('urlInput');
     setTimeout(() => input.focus(), 80);
+    syncTopTilesVisibility();
   }
 
   async function pasteFromClipboard() {
@@ -2141,6 +2756,7 @@
       updateUrlSummary();
       showToast('Pasted from clipboard');
       autoFetchIfUrlPresent();
+      syncTopTilesVisibility();
     } else {
       showToast('Nothing to paste', true);
     }
@@ -2156,6 +2772,8 @@
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span> Fetching';
     const fetchToken = ++activeFetchToken;
+    isFetching = true;
+    syncTopTilesVisibility();
 
     results = [];
     downloadStates = {};
@@ -2166,7 +2784,11 @@
     let fetchedCount = 0;
     for (const url of urls) {
       const data = await nativeCall('fetchInfo', [url]);
-      if (fetchToken !== activeFetchToken) return;
+      if (fetchToken !== activeFetchToken) {
+        isFetching = false;
+        syncTopTilesVisibility();
+        return;
+      }
       if (data.success) {
         if (Array.isArray(data.items) && data.items.length) {
           data.items.forEach(item => {
@@ -2185,7 +2807,11 @@
       }
     }
 
-    if (fetchToken !== activeFetchToken) return;
+    if (fetchToken !== activeFetchToken) {
+      isFetching = false;
+      syncTopTilesVisibility();
+      return;
+    }
     btn.disabled = false;
     btn.innerHTML = `
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -2194,9 +2820,11 @@
 
     renderResults();
     hasSuccessfulFetch = fetchedCount > 0;
+    isFetching = false;
     syncFetchButtonVisibility();
     if (hasSuccessfulFetch) collapseUrlInput();
     else renderVideoQuickPicker();
+    syncTopTilesVisibility();
   }
 
   // ─── Download ───
@@ -2567,6 +3195,12 @@
     if (!results.length) {
       c.innerHTML = `
         <div class="empty">
+          <p class="empty-text">Paste one or more URLs above to fetch media details and start local downloads.</p>
+        </div>`;
+      return;
+
+      c.innerHTML = `
+        <div class="empty">
           <p class="empty-text">Powerful local downloads — no servers, no logins, no tracking.</p>
 
           <div class="feat-grid">
@@ -2636,12 +3270,28 @@
       return;
     }
 
+    const remaining = results.filter(r => {
+      const s = downloadStates[r.url];
+      return !s || s.status !== 'done';
+    }).length;
+
     let html = `
       <div class="section-label">
         <span class="line"></span>
         <span class="text">${results.length} ${results.length === 1 ? 'result' : 'results'}</span>
         <span class="line"></span>
       </div>`;
+    if (remaining > 1) {
+      html += `
+        <button class="dl-all" onclick="downloadAll()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download all ${remaining}
+        </button>`;
+    }
 
     results.forEach((item, i) => {
       const state = downloadStates[item.url] || {};
@@ -2707,22 +3357,16 @@
         </div>`;
     });
 
-    if (results.length > 1) {
-      const remaining = results.filter(r => {
-        const s = downloadStates[r.url];
-        return !s || s.status !== 'done';
-      }).length;
-      if (remaining > 1) {
-        html += `
-          <button class="dl-all" onclick="downloadAll()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            Download all ${remaining}
-          </button>`;
-      }
+    if (remaining > 1) {
+      html += `
+        <button class="dl-all" onclick="downloadAll()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download all ${remaining}
+        </button>`;
     }
 
     // Bottom spacer so the last item isn't flush against the footer
@@ -2759,13 +3403,18 @@
     return `<div class="dl-item"><div class="dl-meta"><div class="dl-title">${escapeHtml(label)}</div><div class="dl-detail"><span class="mono">${escapeHtml(String(value ?? 'n/a'))}</span></div></div></div>`;
   }
 
-  function openRuntimeInfo() {
+  function renderDiagnosticsRows() {
     const rows = [];
     try {
       if (isNative() && typeof ReClip.getRuntimeInfo === 'function') {
         const info = JSON.parse(ReClip.getRuntimeInfo());
         rows.push(runtimeRow('Mode', info.mode || 'local_on_device'));
         rows.push(runtimeRow('Server', info.server || 'none'));
+        rows.push(runtimeRow('Desktop server', info.desktopServerEnabled ? (info.desktopServerUrl || 'on') : 'off'));
+        if (info.desktopServerEnabled) {
+          rows.push(runtimeRow('Desktop paired', info.desktopServerPaired ? 'yes' : 'waiting for PIN'));
+          rows.push(runtimeRow('Desktop active jobs', info.desktopServerActiveJobs || 0));
+        }
         rows.push(runtimeRow('Package', info.appPackage || 'unknown'));
         rows.push(runtimeRow('Android SDK', info.sdkInt || 'unknown'));
         rows.push(runtimeRow('Pro unlocked', info.isPro ? 'yes' : 'no'));
@@ -2792,7 +3441,11 @@
     } catch (e) {
       rows.push(runtimeRow('Error', e.message || 'Failed to read runtime info'));
     }
-    document.getElementById('runtimeList').innerHTML = rows.join('');
+    return rows;
+  }
+
+  function openRuntimeInfo() {
+    document.getElementById('runtimeList').innerHTML = renderDiagnosticsRows().join('');
     document.getElementById('runtimeBackdrop').classList.add('open');
     document.getElementById('runtimeSheet').classList.add('open');
   }
@@ -2800,6 +3453,19 @@
   function closeRuntimeInfo() {
     document.getElementById('runtimeBackdrop').classList.remove('open');
     document.getElementById('runtimeSheet').classList.remove('open');
+  }
+
+  function openSettings() {
+    syncAutoFetchToggleUI();
+    refreshDesktopModeStatus();
+    document.getElementById('settingsRuntimeList').innerHTML = renderDiagnosticsRows().join('');
+    document.getElementById('settingsBackdrop').classList.add('open');
+    document.getElementById('settingsSheet').classList.add('open');
+  }
+
+  function closeSettings() {
+    document.getElementById('settingsBackdrop').classList.remove('open');
+    document.getElementById('settingsSheet').classList.remove('open');
   }
 
   // ─── ReClip Pro state ───
@@ -2864,7 +3530,11 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     loadAudioProfilePreference();
+    loadAutoFetchPreference();
     applyAudioProfileSelectionUI();
+    syncAutoFetchToggleUI();
+    refreshDesktopModeStatus();
+    syncTopTilesVisibility();
     if (isNative() && typeof ReClip.isProUser === 'function') {
       try { setProUI(ReClip.isProUser()); } catch (e) { setProUI(false); }
       refreshProStatusFromNative();
@@ -2914,13 +3584,18 @@
         if (shouldForceAudioFromShare(pending)) {
           forceFormatAudio();
         }
-        setTimeout(() => fetchInfo(), 600);
+        if (autoFetchEnabled) {
+          setTimeout(() => fetchInfo(), 600);
+        } else {
+          syncTopTilesVisibility();
+        }
       }
     } else {
       document.getElementById('statusLabel').textContent = 'Demo Mode';
       document.getElementById('statusDot').style.background = '#ffaa44';
       document.getElementById('statusDot').style.boxShadow = '0 0 10px rgba(255,170,68,0.4)';
     }
+    syncTopTilesVisibility();
   });
 
   // Mouse-tracked gradient on format buttons
@@ -2936,3 +3611,4 @@
 </script>
 </body>
 </html>
+

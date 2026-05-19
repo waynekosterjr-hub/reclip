@@ -1,6 +1,8 @@
 package com.reclip.app;
 
 import android.Manifest;
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ContentResolver;
@@ -26,6 +28,8 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
@@ -46,8 +50,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "ReClip";
+    static final String ACTION_STOP_DESKTOP_SERVER = "com.reclip.app.STOP_DESKTOP_SERVER";
+    private static final int DESKTOP_NOTIFICATION_ID = 42;
     private WebView webView;
     private PaywallLauncher paywallLauncher;
+    private DesktopServerManager desktopServerManager;
     private final ExecutorService executor = Executors.newFixedThreadPool(3);
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private String pendingSharedUrl = null;
@@ -146,6 +153,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         setContentView(R.layout.activity_main);
+        desktopServerManager = new DesktopServerManager(this);
 
         // Push entitlement updates to the WebView so it can lock/unlock pro features live.
         RevenueCatManager.INSTANCE.addCustomerInfoListener(info -> {
@@ -185,6 +193,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void handleIncomingIntent(Intent intent) {
+        if (intent != null && ACTION_STOP_DESKTOP_SERVER.equals(intent.getAction())) {
+            stopDesktopServer();
+            Toast.makeText(this, "Desktop Mode stopped", Toast.LENGTH_SHORT).show();
+            return;
+        }
         if (Intent.ACTION_SEND.equals(intent.getAction()) && "text/plain".equals(intent.getType())) {
             String shared = intent.getStringExtra(Intent.EXTRA_TEXT);
             if (shared != null) {
@@ -225,6 +238,15 @@ public class MainActivity extends AppCompatActivity {
 
         webView.addJavascriptInterface(new ReClipBridge(), "ReClip");
         webView.loadUrl("file:///android_asset/www/index.html");
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (desktopServerManager != null) {
+            desktopServerManager.stopServer();
+        }
+        hideDesktopServerNotification();
+        super.onDestroy();
     }
 
     @Override
@@ -418,6 +440,301 @@ public class MainActivity extends AppCompatActivity {
         return name;
     }
 
+    String fetchInfoForDesktop(String url) {
+        return fetchInfoSync(url);
+    }
+
+    String startDownloadForDesktop(String url, String formatChoice, String formatId, String title, String audioProfile) {
+        return startDownloadSync(url, formatChoice, formatId, title, audioProfile);
+    }
+
+    String getRuntimeInfoJson() {
+        try {
+            org.json.JSONObject out = new org.json.JSONObject();
+            DesktopServerManager.Status desktop = desktopServerManager != null
+                ? desktopServerManager.getStatus()
+                : DesktopServerManager.Status.off();
+            out.put("mode", "local_on_device");
+            out.put("server", desktop.running ? desktop.url : "none (in-process, no IP:PORT)");
+            out.put("desktopServerEnabled", desktop.running);
+            out.put("desktopServerUrl", desktop.url);
+            out.put("desktopServerPin", desktop.pin);
+            out.put("desktopServerPaired", desktop.paired);
+            out.put("desktopServerActiveJobs", desktop.activeJobs);
+            out.put("nativeLibraryDir", getFFmpegNativeDir());
+            out.put("writableFfmpegDir", getFFmpegWritableDir());
+            out.put("bundledFfmpegPath", ReClipApplication.getFFmpegPath());
+            out.put("bundledFfprobePath", ReClipApplication.getFFprobePath());
+            out.put("sdkInt", Build.VERSION.SDK_INT);
+            out.put("appPackage", getPackageName());
+            out.put("isPro", RevenueCatManager.INSTANCE.isPro());
+            return out.toString();
+        } catch (Exception e) {
+            return jsonError(e.getMessage());
+        }
+    }
+
+    String getDownloadHistoryJson() {
+        try {
+            org.json.JSONArray arr = loadHistory();
+            for (int i = 0; i < arr.length(); i++) {
+                org.json.JSONObject item = arr.getJSONObject(i);
+                String path = item.optString("path", "");
+                item.put("exists", fileStillExists(path));
+            }
+            return arr.toString();
+        } catch (Exception e) {
+            Log.e(TAG, "getDownloadHistory error", e);
+            return "[]";
+        }
+    }
+
+    org.json.JSONObject findHistoryItem(String id) {
+        try {
+            org.json.JSONArray arr = loadHistory();
+            for (int i = 0; i < arr.length(); i++) {
+                org.json.JSONObject item = arr.getJSONObject(i);
+                if (item.optString("id").equals(id)) return item;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "findHistoryItem error", e);
+        }
+        return null;
+    }
+
+    InputStream openHistoryItemStream(String id) throws Exception {
+        org.json.JSONObject item = findHistoryItem(id);
+        if (item == null) return null;
+        String path = item.optString("path", "");
+        if (path.startsWith("content://")) {
+            return getContentResolver().openInputStream(Uri.parse(path));
+        }
+        File file = new File(path);
+        return file.exists() ? new FileInputStream(file) : null;
+    }
+
+    String getHistoryItemMime(String id) {
+        org.json.JSONObject item = findHistoryItem(id);
+        if (item == null) return "application/octet-stream";
+        String mime = item.optString("mime", "");
+        return mime.isEmpty() ? guessMimeType(item.optString("filename", "")) : mime;
+    }
+
+    String getHistoryItemName(String id) {
+        org.json.JSONObject item = findHistoryItem(id);
+        if (item == null) return "reclip-download";
+        String name = item.optString("filename", "");
+        return name.isEmpty() ? item.optString("title", "reclip-download") : name;
+    }
+
+    String fetchInfoSync(String url) {
+        try {
+            if (isSpotifyLink(url) && !RevenueCatManager.INSTANCE.isPro()) {
+                return jsonError("Spotify downloads require ReClip Pro");
+            }
+            Python py = Python.getInstance();
+            PyObject engine = py.getModule("reclip_engine");
+            configureFFmpeg(engine);
+            PyObject result = engine.callAttr("get_info", url);
+            return result.toString();
+        } catch (Exception e) {
+            Log.e(TAG, "fetchInfo error", e);
+            return jsonError(e.getMessage());
+        }
+    }
+
+    String startDownloadSync(String url, String formatChoice, String formatId, String title, String audioProfile) {
+        AtomicBoolean monitorRunning = new AtomicBoolean(true);
+        Thread progressMonitor = null;
+        try {
+            String premiumReason = premiumRestrictionError(url, formatChoice);
+            if (premiumReason != null) {
+                return jsonError(premiumReason);
+            }
+
+            Python py = Python.getInstance();
+            PyObject engine = py.getModule("reclip_engine");
+            configureFFmpeg(engine);
+            engine.callAttr("reset_progress");
+
+            final String notifTitle =
+                (title != null && !title.trim().isEmpty()) ? title.trim() : "ReClip Download";
+            showDownloadNotification(notifTitle, 0, "Starting...", true);
+            progressMonitor = new Thread(() -> {
+                while (monitorRunning.get()) {
+                    try {
+                        String pJson = engine.callAttr("get_progress").toString();
+                        org.json.JSONObject p = new org.json.JSONObject(pJson);
+                        String status = p.optString("status", "");
+                        int percent = (int) Math.round(p.optDouble("percent", 0));
+                        boolean indeterminate = "processing".equals(status) || percent <= 0;
+                        showDownloadNotification(
+                            notifTitle,
+                            percent,
+                            progressTextFromJson(pJson),
+                            indeterminate
+                        );
+                    } catch (Exception ignored) { }
+                    try { Thread.sleep(700); } catch (InterruptedException ignored) { break; }
+                }
+            });
+            progressMonitor.start();
+
+            String cacheDir = getCacheDir().getAbsolutePath() + "/reclip";
+            new File(cacheDir).mkdirs();
+
+            PyObject result = engine.callAttr("download_media",
+                url, cacheDir, formatChoice,
+                formatId == null || formatId.isEmpty() ? null : formatId,
+                title,
+                (audioProfile == null || audioProfile.isEmpty()) ? null : audioProfile);
+            String json = result.toString();
+
+            try {
+                org.json.JSONObject obj = new org.json.JSONObject(json);
+                if (obj.optBoolean("success", false)) {
+                    String srcPath = obj.getString("file");
+                    File src = new File(srcPath);
+                    if (!src.exists()) {
+                        obj.put("success", false);
+                        obj.put("error", "Downloaded file not found: " + srcPath);
+                        json = obj.toString();
+                    } else {
+                        String mimeType = guessMimeType(src.getName());
+                        String publicPath = saveFileToDownloads(src, mimeType);
+                        if (publicPath != null) {
+                            obj.put("file", publicPath);
+                            obj.put("public_uri", publicPath);
+                            addToHistory(
+                                obj.optString("filename", ""),
+                                publicPath,
+                                obj.optLong("size", 0),
+                                url,
+                                title,
+                                formatChoice,
+                                mimeType
+                            );
+                        } else {
+                            obj.put("success", false);
+                            obj.put("error", "Failed to save to Downloads. Check permissions.");
+                        }
+                        json = obj.toString();
+                    }
+                }
+            } catch (Exception moveErr) {
+                Log.e(TAG, "Error saving file", moveErr);
+            }
+
+            try {
+                org.json.JSONObject finalObj = new org.json.JSONObject(json);
+                boolean ok = finalObj.optBoolean("success", false);
+                completeDownloadNotification(
+                    notifTitle,
+                    ok,
+                    ok ? "Download complete" : finalObj.optString("error", "Download failed")
+                );
+            } catch (Exception ignored) {
+                completeDownloadNotification(notifTitle, false, "Download failed");
+            }
+            return json;
+        } catch (Exception e) {
+            Log.e(TAG, "startDownload error", e);
+            completeDownloadNotification(title, false, e.getMessage());
+            return jsonError(e.getMessage());
+        } finally {
+            monitorRunning.set(false);
+            if (progressMonitor != null) {
+                progressMonitor.interrupt();
+            }
+        }
+    }
+
+    String premiumRestrictionError(String url, String formatChoice) {
+        boolean isAudioRequest = "audio".equalsIgnoreCase(formatChoice == null ? "" : formatChoice);
+        boolean isSpotifyUrl = isSpotifyLink(url);
+        boolean needsPro = isAudioRequest || isSpotifyUrl;
+        if (needsPro && !RevenueCatManager.INSTANCE.isPro()) {
+            return isSpotifyUrl
+                ? "Spotify downloads require ReClip Pro"
+                : "Audio extraction requires ReClip Pro";
+        }
+        return null;
+    }
+
+    boolean isSpotifyLink(String url) {
+        if (url == null) return false;
+        String lower = url.toLowerCase(Locale.ROOT);
+        return lower.contains("open.spotify.com/") || lower.contains("spotify.link/");
+    }
+
+    String jsonError(String message) {
+        String escaped = message == null ? "Unknown error"
+            : message.replace("\\", "\\\\").replace("\"", "\\\"");
+        return "{\"success\":false,\"error\":\"" + escaped + "\"}";
+    }
+
+    String setDesktopServerEnabled(boolean enabled) {
+        try {
+            if (desktopServerManager == null) {
+                desktopServerManager = new DesktopServerManager(this);
+            }
+            if (enabled) {
+                desktopServerManager.startServer();
+                showDesktopServerNotification();
+            } else {
+                stopDesktopServer();
+            }
+            return desktopServerManager.getStatusJson();
+        } catch (Exception e) {
+            Log.e(TAG, "Desktop server toggle failed", e);
+            return jsonError(e.getMessage());
+        }
+    }
+
+    String getDesktopServerStatusJson() {
+        if (desktopServerManager == null) return DesktopServerManager.Status.off().toJson().toString();
+        return desktopServerManager.getStatusJson();
+    }
+
+    void stopDesktopServer() {
+        if (desktopServerManager != null) {
+            desktopServerManager.stopServer();
+        }
+        hideDesktopServerNotification();
+        postToWebView("if(window.onDesktopServerChanged)window.onDesktopServerChanged(" + getDesktopServerStatusJson() + ");");
+    }
+
+    private void showDesktopServerNotification() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        Intent stopIntent = new Intent(this, MainActivity.class);
+        stopIntent.setAction(ACTION_STOP_DESKTOP_SERVER);
+        stopIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+            this,
+            420,
+            stopIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+        Notification n = new NotificationCompat.Builder(this, "reclip_downloads")
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("ReClip Desktop Mode is running")
+            .setContentText("Tap to close the desktop server")
+            .setContentIntent(pendingIntent)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build();
+        NotificationManagerCompat.from(this).notify(DESKTOP_NOTIFICATION_ID, n);
+    }
+
+    private void hideDesktopServerNotification() {
+        NotificationManagerCompat.from(this).cancel(DESKTOP_NOTIFICATION_ID);
+    }
+
     /**
      * Bridge between WebView UI and native Python/Java code.
      */
@@ -426,182 +743,24 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void fetchInfo(String url, String callbackId) {
             executor.execute(() -> {
-                try {
-                    if (isSpotifyLink(url) && !RevenueCatManager.INSTANCE.isPro()) {
-                        postToWebView("window._nativeCallback('" + callbackId + "', " +
-                            jsonError("Spotify downloads require ReClip Pro") + ");");
-                        mainHandler.post(() -> paywallLauncher.showIfNeeded());
-                        return;
-                    }
-
-                    Python py = Python.getInstance();
-                    PyObject engine = py.getModule("reclip_engine");
-                    configureFFmpeg(engine);
-                    PyObject result = engine.callAttr("get_info", url);
-                    String json = result.toString();
-                    postToWebView("window._nativeCallback('" + callbackId + "', " + json + ");");
-                } catch (Exception e) {
-                    Log.e(TAG, "fetchInfo error", e);
-                    String err = "{\"success\":false,\"error\":\"" +
-                        e.getMessage().replace("\"", "\\\"") + "\"}";
-                    postToWebView("window._nativeCallback('" + callbackId + "', " + err + ");");
+                if (isSpotifyLink(url) && !RevenueCatManager.INSTANCE.isPro()) {
+                    mainHandler.post(() -> paywallLauncher.showIfNeeded());
                 }
+                String json = fetchInfoSync(url);
+                postToWebView("window._nativeCallback('" + callbackId + "', " + json + ");");
             });
         }
 
         @JavascriptInterface
         public void startDownload(String url, String formatChoice, String formatId, String title, String audioProfile, String callbackId) {
             executor.execute(() -> {
-                AtomicBoolean monitorRunning = new AtomicBoolean(true);
-                Thread progressMonitor = null;
-                try {
-                    String premiumReason = premiumRestrictionError(url, formatChoice);
-                    if (premiumReason != null) {
-                        postToWebView("window._nativeCallback('" + callbackId + "', " +
-                            jsonError(premiumReason) + ");");
-                        if (!RevenueCatManager.INSTANCE.isPro()) {
-                            mainHandler.post(() -> paywallLauncher.showIfNeeded());
-                        }
-                        return;
-                    }
-
-                    Python py = Python.getInstance();
-                    PyObject engine = py.getModule("reclip_engine");
-                    configureFFmpeg(engine);
-                    engine.callAttr("reset_progress");
-
-                    final String notifTitle =
-                        (title != null && !title.trim().isEmpty()) ? title.trim() : "ReClip Download";
-                    showDownloadNotification(notifTitle, 0, "Starting...", true);
-                    progressMonitor = new Thread(() -> {
-                        while (monitorRunning.get()) {
-                            try {
-                                String pJson = engine.callAttr("get_progress").toString();
-                                org.json.JSONObject p = new org.json.JSONObject(pJson);
-                                String status = p.optString("status", "");
-                                int percent = (int) Math.round(p.optDouble("percent", 0));
-                                boolean indeterminate = "processing".equals(status) || percent <= 0;
-                                showDownloadNotification(
-                                    notifTitle,
-                                    percent,
-                                    progressTextFromJson(pJson),
-                                    indeterminate
-                                );
-                            } catch (Exception ignored) { }
-                            try { Thread.sleep(700); } catch (InterruptedException ignored) { break; }
-                        }
-                    });
-                    progressMonitor.start();
-
-                    // Download to app cache first
-                    String cacheDir = getCacheDir().getAbsolutePath() + "/reclip";
-                    new File(cacheDir).mkdirs();
-
-                    PyObject result = engine.callAttr("download_media",
-                        url, cacheDir, formatChoice,
-                        formatId.isEmpty() ? null : formatId,
-                        title,
-                        (audioProfile == null || audioProfile.isEmpty()) ? null : audioProfile);
-                    String json = result.toString();
-
-                    // Parse result and save to public Downloads
-                    try {
-                        org.json.JSONObject obj = new org.json.JSONObject(json);
-                        if (obj.optBoolean("success", false)) {
-                            String srcPath = obj.getString("file");
-                            File src = new File(srcPath);
-
-                            if (!src.exists()) {
-                                Log.e(TAG, "Source file doesn't exist: " + srcPath);
-                                obj.put("success", false);
-                                obj.put("error", "Downloaded file not found: " + srcPath);
-                                json = obj.toString();
-                            } else {
-                                String mimeType = guessMimeType(src.getName());
-                                String publicPath = saveFileToDownloads(src, mimeType);
-
-                                if (publicPath != null) {
-                                    obj.put("file", publicPath);
-                                    obj.put("public_uri", publicPath);
-                                    Log.i(TAG, "Saved file to: " + publicPath);
-
-                                    // Record in download history
-                                    try {
-                                        addToHistory(
-                                            obj.optString("filename", ""),
-                                            publicPath,
-                                            obj.optLong("size", 0),
-                                            url,
-                                            title,
-                                            formatChoice,
-                                            mimeType
-                                        );
-                                    } catch (Exception histErr) {
-                                        Log.e(TAG, "Failed to record history", histErr);
-                                    }
-                                } else {
-                                    obj.put("success", false);
-                                    obj.put("error", "Failed to save to Downloads. Check permissions.");
-                                }
-                                json = obj.toString();
-                            }
-                        }
-                    } catch (Exception moveErr) {
-                        Log.e(TAG, "Error saving file", moveErr);
-                    }
-
-                    try {
-                        org.json.JSONObject finalObj = new org.json.JSONObject(json);
-                        boolean ok = finalObj.optBoolean("success", false);
-                        if (ok) {
-                            completeDownloadNotification(notifTitle, true, "Download complete");
-                        } else {
-                            completeDownloadNotification(
-                                notifTitle, false, finalObj.optString("error", "Download failed")
-                            );
-                        }
-                    } catch (Exception ignored) {
-                        completeDownloadNotification(notifTitle, false, "Download failed");
-                    }
-
-                    postToWebView("window._nativeCallback('" + callbackId + "', " + json + ");");
-                } catch (Exception e) {
-                    Log.e(TAG, "startDownload error", e);
-                    completeDownloadNotification(title, false, e.getMessage());
-                    String err = "{\"success\":false,\"error\":\"" +
-                        e.getMessage().replace("\"", "\\\"") + "\"}";
-                    postToWebView("window._nativeCallback('" + callbackId + "', " + err + ");");
-                } finally {
-                    monitorRunning.set(false);
-                    if (progressMonitor != null) {
-                        progressMonitor.interrupt();
-                    }
+                String premiumReason = premiumRestrictionError(url, formatChoice);
+                if (premiumReason != null && !RevenueCatManager.INSTANCE.isPro()) {
+                    mainHandler.post(() -> paywallLauncher.showIfNeeded());
                 }
+                String json = startDownloadSync(url, formatChoice, formatId, title, audioProfile);
+                postToWebView("window._nativeCallback('" + callbackId + "', " + json + ");");
             });
-        }
-
-        private String premiumRestrictionError(String url, String formatChoice) {
-            boolean isAudioRequest = "audio".equalsIgnoreCase(formatChoice == null ? "" : formatChoice);
-            boolean isSpotifyUrl = isSpotifyLink(url);
-            boolean needsPro = isAudioRequest || isSpotifyUrl;
-            if (needsPro && !RevenueCatManager.INSTANCE.isPro()) {
-                return isSpotifyUrl
-                    ? "Spotify downloads require ReClip Pro"
-                    : "Audio extraction requires ReClip Pro";
-            }
-            return null;
-        }
-
-        private boolean isSpotifyLink(String url) {
-            if (url == null) return false;
-            String lower = url.toLowerCase(Locale.ROOT);
-            return lower.contains("open.spotify.com/") || lower.contains("spotify.link/");
-        }
-
-        private String jsonError(String message) {
-            String escaped = message == null ? "Unknown error"
-                : message.replace("\\", "\\\\").replace("\"", "\\\"");
-            return "{\"success\":false,\"error\":\"" + escaped + "\"}";
         }
 
         @JavascriptInterface
@@ -735,23 +894,7 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public String getRuntimeInfo() {
-            try {
-                org.json.JSONObject out = new org.json.JSONObject();
-                out.put("mode", "local_on_device");
-                out.put("server", "none (in-process, no IP:PORT)");
-                out.put("nativeLibraryDir", getFFmpegNativeDir());
-                out.put("writableFfmpegDir", getFFmpegWritableDir());
-                out.put("bundledFfmpegPath", ReClipApplication.getFFmpegPath());
-                out.put("bundledFfprobePath", ReClipApplication.getFFprobePath());
-                out.put("sdkInt", Build.VERSION.SDK_INT);
-                out.put("appPackage", getPackageName());
-                out.put("isPro", RevenueCatManager.INSTANCE.isPro());
-                out.put("revenueCatConfigured", RevenueCatManager.INSTANCE.isSdkConfigured());
-                return out.toString();
-            } catch (Exception e) {
-                return "{\"success\":false,\"error\":\"" +
-                    e.getMessage().replace("\"", "\\\"") + "\"}";
-            }
+            return getRuntimeInfoJson();
         }
 
         /**
@@ -760,19 +903,7 @@ public class MainActivity extends AppCompatActivity {
          */
         @JavascriptInterface
         public String getDownloadHistory() {
-            try {
-                org.json.JSONArray arr = loadHistory();
-                // Verify each file still exists (in case user deleted via Files app)
-                for (int i = 0; i < arr.length(); i++) {
-                    org.json.JSONObject item = arr.getJSONObject(i);
-                    String path = item.optString("path", "");
-                    item.put("exists", fileStillExists(path));
-                }
-                return arr.toString();
-            } catch (Exception e) {
-                Log.e(TAG, "getDownloadHistory error", e);
-                return "[]";
-            }
+            return getDownloadHistoryJson();
         }
 
         /**
@@ -857,6 +988,41 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // ─── RevenueCat / ReClip Pro ──────────────────────────────────
+
+        @JavascriptInterface
+        public String getDesktopServerStatus() {
+            return getDesktopServerStatusJson();
+        }
+
+        @JavascriptInterface
+        public void setDesktopServerEnabled(boolean enabled, String callbackId) {
+            executor.execute(() -> {
+                String json = MainActivity.this.setDesktopServerEnabled(enabled);
+                postToWebView("window._nativeCallback('" + callbackId + "', " + json + ");");
+            });
+        }
+
+        @JavascriptInterface
+        public void copyText(String text) {
+            mainHandler.post(() -> {
+                ClipboardManager clipboard =
+                    (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard != null) {
+                    clipboard.setPrimaryClip(ClipData.newPlainText("ReClip", text == null ? "" : text));
+                    Toast.makeText(MainActivity.this, "Copied", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void shareText(String text) {
+            mainHandler.post(() -> {
+                Intent intent = new Intent(Intent.ACTION_SEND);
+                intent.setType("text/plain");
+                intent.putExtra(Intent.EXTRA_TEXT, text == null ? "" : text);
+                startActivity(Intent.createChooser(intent, "Share ReClip Desktop link"));
+            });
+        }
 
         /** Sync entitlement check off the cached customer info. */
         @JavascriptInterface

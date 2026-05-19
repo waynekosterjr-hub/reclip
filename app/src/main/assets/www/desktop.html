@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ReClip Desktop Mode</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070714;
+      --panel: #111124;
+      --panel-2: #17172d;
+      --line: rgba(255,255,255,.1);
+      --text: #f4f1ff;
+      --muted: #9a96aa;
+      --hot: #ec168e;
+      --violet: #a238f1;
+      --cyan: #17c7ff;
+      --ok: #08c7b6;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 16% 12%, rgba(236,22,142,.22), transparent 28rem),
+        radial-gradient(circle at 85% 16%, rgba(23,199,255,.16), transparent 24rem),
+        var(--bg);
+      color: var(--text);
+      font: 16px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+    }
+    button, textarea, input, select { font: inherit; }
+    .shell { padding: 28px; max-width: 1720px; margin: 0 auto; }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 18px; margin-bottom: 24px;
+    }
+    .brand { display: flex; align-items: center; gap: 16px; }
+    .brand img { width: 58px; height: 58px; object-fit: contain; filter: drop-shadow(0 0 20px rgba(236,22,142,.45)); }
+    .brand h1 { margin: 0; font-size: 28px; letter-spacing: .01em; }
+    .brand span { display: block; color: var(--muted); font-size: 12px; letter-spacing: .42em; text-transform: uppercase; }
+    .top-pill {
+      border: 1px solid var(--line); border-radius: 999px; padding: 12px 16px;
+      background: rgba(255,255,255,.045); color: var(--muted); font-weight: 800;
+    }
+    .grid { display: grid; grid-template-columns: 360px minmax(560px,1fr) 340px; gap: 20px; align-items: start; }
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.025));
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: 0 18px 70px rgba(0,0,0,.34);
+      overflow: hidden;
+    }
+    .panel-pad { padding: 20px; }
+    .section-label { color: var(--muted); font-size: 12px; letter-spacing: .3em; text-transform: uppercase; margin: 0 0 12px; }
+    textarea {
+      width: 100%; min-height: 190px; resize: vertical; color: var(--text);
+      background: #0c0c1e; border: 1px solid var(--line); border-radius: 18px; padding: 16px;
+      outline: none;
+    }
+    textarea:focus { border-color: rgba(236,22,142,.72); box-shadow: 0 0 0 4px rgba(236,22,142,.12); }
+    .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+    .seg button, .profile button, .quality button {
+      border: 1px solid var(--line); color: var(--muted); background: rgba(255,255,255,.045);
+      border-radius: 16px; padding: 13px 14px; cursor: pointer; font-weight: 900;
+      text-align: left;
+    }
+    .seg button.active, .profile button.active, .quality button.active {
+      color: white; border-color: var(--hot);
+      background: linear-gradient(135deg, rgba(236,22,142,.82), rgba(162,56,241,.78));
+      box-shadow: 0 0 28px rgba(236,22,142,.18);
+    }
+    .actions { display: grid; gap: 10px; margin-top: 14px; }
+    .primary {
+      border: 0; border-radius: 18px; padding: 16px 18px; color: white; cursor: pointer;
+      font-weight: 950; background: linear-gradient(100deg, var(--hot), var(--violet));
+    }
+    .ghost {
+      border: 1px solid var(--line); border-radius: 16px; padding: 13px 16px;
+      color: var(--text); background: rgba(255,255,255,.045); cursor: pointer; font-weight: 850;
+    }
+    .profile, .quality { display: grid; gap: 10px; margin-top: 12px; }
+    .profile button small, .quality button small { display: block; color: rgba(255,255,255,.62); margin-top: 2px; font-weight: 650; }
+    .results { display: grid; gap: 14px; padding: 18px; }
+    .empty { min-height: 420px; display: grid; place-items: center; color: var(--muted); text-align: center; }
+    .card {
+      display: grid; grid-template-columns: 190px 1fr; gap: 16px; padding: 14px;
+      background: rgba(9,9,24,.72); border: 1px solid var(--line); border-radius: 20px;
+    }
+    .thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 14px; background: #1c1c31; }
+    .card h3 { margin: 0 0 6px; font-size: 19px; }
+    .meta { color: var(--muted); font-weight: 750; }
+    .card-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    .download { flex: 1; min-width: 190px; }
+    .status-list { display: grid; gap: 10px; }
+    .status-row { padding: 14px; background: rgba(255,255,255,.04); border-radius: 16px; border: 1px solid rgba(255,255,255,.055); }
+    .status-row b { display: block; margin-bottom: 3px; }
+    .status-row span { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; }
+    .pair-screen {
+      position: fixed; inset: 0; display: grid; place-items: center; padding: 24px;
+      background: rgba(4,4,12,.86); backdrop-filter: blur(18px); z-index: 10;
+    }
+    .pair-card { max-width: 460px; width: 100%; padding: 28px; }
+    .pin { width: 100%; padding: 18px; border-radius: 16px; border: 1px solid var(--line); background: #0b0b1d; color: white; font-size: 26px; letter-spacing: .18em; text-align: center; }
+    .hidden { display: none !important; }
+    .toast { position: fixed; right: 24px; bottom: 24px; padding: 14px 16px; border-radius: 16px; background: #18182d; border: 1px solid var(--line); color: white; opacity: 0; transform: translateY(12px); transition: .2s ease; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    @media (max-width: 1120px) {
+      .grid { grid-template-columns: 1fr; }
+      .card { grid-template-columns: 150px 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand">
+        <img src="/logo.png" alt="ReClip">
+        <div><h1>ReClip Desktop</h1><span>Phone hosted engine</span></div>
+      </div>
+      <div class="top-pill" id="connectionPill">Pair to control</div>
+    </header>
+
+    <main class="grid">
+      <aside class="panel panel-pad">
+        <p class="section-label">Control</p>
+        <textarea id="urlInput" placeholder="Paste one or more media URLs"></textarea>
+        <div class="seg">
+          <button id="modeVideo" class="active" onclick="setMode('video')">Video</button>
+          <button id="modeAudio" onclick="setMode('audio')">Audio</button>
+        </div>
+        <div class="profile" id="profilePicker">
+          <p class="section-label">Audio Profile</p>
+          <button data-profile="mp3_320_cbr" onclick="setProfile(this)">Broadcast Master<small>MP3 320kbps CBR</small></button>
+          <button data-profile="mp3_v0_vbr" onclick="setProfile(this)">Dynamic Studio<small>MP3 VBR V0</small></button>
+          <button class="active" data-profile="mp3_256_cbr" onclick="setProfile(this)">High-Res Standard<small>MP3 256kbps CBR</small></button>
+          <button data-profile="flac_lossless" onclick="setProfile(this)">Studio Archive<small>FLAC Lossless</small></button>
+        </div>
+        <div class="quality hidden" id="qualityPicker">
+          <p class="section-label">Video Quality</p>
+        </div>
+        <div class="actions">
+          <button class="primary" onclick="fetchInfo()">Fetch metadata</button>
+          <button class="ghost" onclick="downloadAll()">Download all fetched</button>
+        </div>
+      </aside>
+
+      <section class="panel">
+        <div class="results" id="results"><div class="empty">Pair, paste, fetch, then let the phone do the work.</div></div>
+      </section>
+
+      <aside class="panel panel-pad">
+        <p class="section-label">Phone Status</p>
+        <div class="status-list" id="statusList"></div>
+        <p class="section-label" style="margin-top:20px">Recent Files</p>
+        <div class="status-list" id="historyList"></div>
+      </aside>
+    </main>
+  </div>
+
+  <div class="pair-screen" id="pairScreen">
+    <div class="panel pair-card">
+      <p class="section-label">Pair ReClip</p>
+      <h2>Enter the PIN shown in the Android app.</h2>
+      <input id="pinInput" class="pin" inputmode="numeric" maxlength="6" placeholder="000000">
+      <div class="actions"><button class="primary" onclick="pair()">Pair desktop browser</button></div>
+      <p id="pairError" class="meta"></p>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const TOKEN_KEY = 'reclip_desktop_token';
+    let token = localStorage.getItem(TOKEN_KEY) || '';
+    let mode = 'video';
+    let audioProfile = 'mp3_256_cbr';
+    let fetched = [];
+    let selectedFormat = {};
+
+    function authHeaders() {
+      return token ? { 'Authorization': 'Bearer ' + token } : {};
+    }
+    async function api(path, options = {}) {
+      const headers = Object.assign({ 'Content-Type': 'application/json' }, authHeaders(), options.headers || {});
+      const res = await fetch(path, Object.assign({}, options, { headers }));
+      if (res.status === 401 || res.status === 403) {
+        localStorage.removeItem(TOKEN_KEY);
+        token = '';
+        document.getElementById('pairScreen').classList.remove('hidden');
+      }
+      const data = await res.json();
+      if (!res.ok || data.success === false) throw new Error(data.error || 'Request failed');
+      return data;
+    }
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2400);
+    }
+    async function pair() {
+      try {
+        const pin = document.getElementById('pinInput').value.trim();
+        const res = await fetch('/api/pair', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ pin }) });
+        const data = await res.json();
+        if (!res.ok || !data.token) throw new Error(data.error || 'Pairing failed');
+        token = data.token;
+        localStorage.setItem(TOKEN_KEY, token);
+        document.getElementById('pairScreen').classList.add('hidden');
+        await refresh();
+      } catch (e) {
+        document.getElementById('pairError').textContent = e.message;
+      }
+    }
+    function setMode(next) {
+      mode = next;
+      document.getElementById('modeVideo').classList.toggle('active', mode === 'video');
+      document.getElementById('modeAudio').classList.toggle('active', mode === 'audio');
+      renderQuality();
+    }
+    function setProfile(btn) {
+      audioProfile = btn.dataset.profile;
+      document.querySelectorAll('#profilePicker button').forEach(b => b.classList.toggle('active', b === btn));
+    }
+    async function fetchInfo() {
+      const url = document.getElementById('urlInput').value.trim();
+      if (!url) return toast('Paste a URL first');
+      document.getElementById('results').innerHTML = '<div class="empty">Fetching metadata from the phone...</div>';
+      try {
+        const info = await api('/api/info', { method:'POST', body: JSON.stringify({ url }) });
+        fetched = Array.isArray(info.items) ? info.items : [info];
+        selectedFormat = {};
+        fetched.forEach((item, i) => {
+          if (Array.isArray(item.formats) && item.formats[0]) selectedFormat[i] = item.formats[0].id || '';
+        });
+        renderQuality();
+        renderResults();
+      } catch (e) {
+        document.getElementById('results').innerHTML = `<div class="empty">${escapeHtml(e.message)}</div>`;
+      }
+    }
+    function renderQuality() {
+      const wrap = document.getElementById('qualityPicker');
+      if (mode !== 'video' || !fetched[0] || !Array.isArray(fetched[0].formats)) {
+        wrap.classList.add('hidden');
+        return;
+      }
+      wrap.classList.remove('hidden');
+      wrap.innerHTML = '<p class="section-label">Video Quality</p>' + fetched[0].formats.slice(0, 4).map(f => {
+        const active = selectedFormat[0] === f.id ? 'active' : '';
+        return `<button class="${active}" onclick="selectQuality('${escapeAttr(f.id || '')}')">${escapeHtml(f.label || f.height || 'Best')}<small>${escapeHtml(f.bitrate || f.ext || 'available')}</small></button>`;
+      }).join('');
+    }
+    function selectQuality(id) {
+      selectedFormat[0] = id;
+      renderQuality();
+    }
+    function renderResults() {
+      if (!fetched.length) {
+        document.getElementById('results').innerHTML = '<div class="empty">No results yet.</div>';
+        return;
+      }
+      document.getElementById('results').innerHTML = fetched.map((item, i) => {
+        const thumb = item.thumbnail || '';
+        const title = item.title || 'Untitled media';
+        const by = item.uploader || item.artist || '';
+        return `<article class="card">
+          <img class="thumb" src="${escapeAttr(thumb)}" onerror="this.style.visibility='hidden'">
+          <div>
+            <h3>${escapeHtml(title)}</h3>
+            <div class="meta">${escapeHtml(by)}</div>
+            <div class="card-actions">
+              <button class="primary download" onclick="downloadItem(${i})">Download ${mode === 'audio' ? 'Audio' : 'Video'}</button>
+            </div>
+            <div class="meta" id="job-${i}"></div>
+          </div>
+        </article>`;
+      }).join('');
+    }
+    async function downloadItem(i) {
+      const item = fetched[i];
+      try {
+        const job = await api('/api/download', { method:'POST', body: JSON.stringify({
+          url: item.url || document.getElementById('urlInput').value.trim(),
+          formatChoice: mode,
+          formatId: mode === 'video' ? (selectedFormat[i] || selectedFormat[0] || '') : '',
+          title: item.title || '',
+          audioProfile
+        })});
+        pollJob(job.jobId, i);
+      } catch (e) {
+        toast(e.message);
+      }
+    }
+    function downloadAll() {
+      fetched.forEach((_, i) => downloadItem(i));
+    }
+    async function pollJob(id, index) {
+      const node = document.getElementById('job-' + index);
+      const tick = async () => {
+        try {
+          const job = await api('/api/progress/' + encodeURIComponent(id));
+          if (node) node.textContent = `${job.status} ${job.percent || 0}% - ${job.message || ''}`;
+          if (job.status === 'done' || job.status === 'error') {
+            refresh();
+            return;
+          }
+          setTimeout(tick, 1000);
+        } catch (e) {
+          if (node) node.textContent = e.message;
+        }
+      };
+      tick();
+    }
+    async function refresh() {
+      try {
+        const status = await api('/api/status');
+        document.getElementById('pairScreen').classList.add('hidden');
+        document.getElementById('connectionPill').textContent = status.desktop?.url || 'Connected';
+        const rows = [
+          ['Desktop server', status.desktop?.url || 'on'],
+          ['Paired', status.desktop?.paired ? 'yes' : 'no'],
+          ['Active jobs', status.desktop?.activeJobs ?? 0],
+          ['Pro unlocked', status.isPro ? 'yes' : 'no'],
+          ['yt-dlp/ffmpeg', 'Available on phone']
+        ];
+        document.getElementById('statusList').innerHTML = rows.map(row => `<div class="status-row"><b>${escapeHtml(row[0])}</b><span>${escapeHtml(row[1])}</span></div>`).join('');
+        const history = await api('/api/history');
+        document.getElementById('historyList').innerHTML = (Array.isArray(history) ? history.slice(0, 6) : []).map(item => {
+          const fileUrl = '/api/file/' + encodeURIComponent(item.id) + '?token=' + encodeURIComponent(token);
+          return `<div class="status-row"><b>${escapeHtml(item.title || item.filename || 'Download')}</b><span>${escapeHtml(formatBytes(item.size || 0))}</span><br><a href="${fileUrl}" target="_blank">Open local link</a></div>`;
+        }).join('') || '<div class="status-row"><span>No downloads yet</span></div>';
+      } catch (e) {
+        document.getElementById('pairScreen').classList.remove('hidden');
+      }
+    }
+    function formatBytes(n) {
+      if (!n) return '0 B';
+      const units = ['B','KB','MB','GB'];
+      let i = 0;
+      while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+      return `${n.toFixed(i ? 1 : 0)} ${units[i]}`;
+    }
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function escapeAttr(value) { return escapeHtml(value).replace(/`/g, '&#96;'); }
+    refresh();
+    setInterval(() => { if (token) refresh(); }, 8000);
+  </script>
+</body>
+</html>

@@ -152,6 +152,33 @@ def _is_spotify_url(url):
     return 'open.spotify.com/' in (url or '') or 'spotify.link/' in (url or '')
 
 
+def _is_youtube_host(host):
+    host = (host or '').lower()
+    return host in (
+        'youtube.com',
+        'www.youtube.com',
+        'm.youtube.com',
+        'music.youtube.com',
+        'youtu.be',
+    )
+
+
+def _is_youtube_playlist_url(url):
+    if not url:
+        return False
+    try:
+        parsed = urllib.parse.urlparse(str(url))
+        if not _is_youtube_host(parsed.netloc):
+            return False
+        query = urllib.parse.parse_qs(parsed.query or '')
+        if query.get('list'):
+            return True
+        path = (parsed.path or '').lower()
+        return path.startswith('/playlist')
+    except Exception:
+        return False
+
+
 def _spotify_error(message):
     return json.dumps({
         'success': False,
@@ -513,37 +540,80 @@ def get_info(url):
         return _get_spotify_info(url)
 
     try:
+        playlist_mode = _is_youtube_playlist_url(url)
         ydl_opts = {
             'quiet': True,
             'no_warnings': True,
-            'noplaylist': True,
+            'noplaylist': not playlist_mode,
             'skip_download': True,
         }
+        if playlist_mode:
+            ydl_opts['extract_flat'] = 'in_playlist'
         ydl_opts.update(_get_ffmpeg_opts())
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
 
-        # Build quality options — keep best format per resolution
-        best_by_height = {}
-        for f in info.get('formats', []):
-            height = f.get('height')
-            vcodec = f.get('vcodec', 'none')
-            if height and vcodec != 'none':
-                tbr = f.get('tbr') or 0
-                existing = best_by_height.get(height)
-                if not existing or tbr > (existing.get('tbr') or 0):
-                    best_by_height[height] = f
+        def _formats_for(entry):
+            best_by_height = {}
+            for f in entry.get('formats', []):
+                height = f.get('height')
+                vcodec = f.get('vcodec', 'none')
+                if height and vcodec != 'none':
+                    tbr = f.get('tbr') or 0
+                    existing = best_by_height.get(height)
+                    if not existing or tbr > (existing.get('tbr') or 0):
+                        best_by_height[height] = f
 
-        formats = []
-        for height, f in best_by_height.items():
-            formats.append({
-                'id': f['format_id'],
-                'label': f'{height}p',
-                'height': height,
-                'tbr': round(float(f.get('tbr') or 0), 1),
-            })
-        formats.sort(key=lambda x: x['height'], reverse=True)
+            formats_local = []
+            for height, f in best_by_height.items():
+                formats_local.append({
+                    'id': f['format_id'],
+                    'label': f'{height}p',
+                    'height': height,
+                    'tbr': round(float(f.get('tbr') or 0), 1),
+                })
+            formats_local.sort(key=lambda x: x['height'], reverse=True)
+            return formats_local
+
+        if playlist_mode and isinstance(info, dict) and isinstance(info.get('entries'), list):
+            playlist_name = info.get('title') or ''
+            items = []
+            for index, entry in enumerate(info.get('entries') or []):
+                if not isinstance(entry, dict):
+                    continue
+                item_url = entry.get('webpage_url') or entry.get('url') or ''
+                if item_url and not str(item_url).startswith('http'):
+                    item_url = 'https://www.youtube.com/watch?v=' + str(item_url)
+                if not item_url:
+                    continue
+
+                items.append({
+                    'title': entry.get('title', ''),
+                    'thumbnail': entry.get('thumbnail', ''),
+                    'duration': entry.get('duration'),
+                    'uploader': entry.get('uploader', '') or entry.get('channel', ''),
+                    'formats': _formats_for(entry),
+                    'url': item_url,
+                    'playlist': playlist_name,
+                    'playlistPosition': index + 1,
+                })
+
+            if items:
+                first = items[0]
+                return json.dumps({
+                    'success': True,
+                    'title': first.get('title', ''),
+                    'thumbnail': first.get('thumbnail', ''),
+                    'duration': first.get('duration'),
+                    'uploader': first.get('uploader', ''),
+                    'formats': first.get('formats', []),
+                    'url': first.get('url') or url,
+                    'playlist': playlist_name,
+                    'items': items,
+                })
+
+        formats = _formats_for(info if isinstance(info, dict) else {})
 
         result = {
             'success': True,
