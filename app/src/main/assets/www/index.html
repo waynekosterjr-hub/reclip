@@ -2954,13 +2954,45 @@
   const HISTORY_KEY = 'reclip_downloads_history';
   let downloadsHistory = [];
   let currentDownloadFilter = 'all';
+  function mapNativeHistoryItem(item) {
+    const format = item?.type === 'audio' ? 'audio' : 'video';
+    return {
+      id: item?.id || '',
+      title: item?.title || item?.filename || 'Untitled',
+      filename: item?.filename || '',
+      filePath: item?.path || '',
+      size: Number(item?.size || 0),
+      thumbnail: item?.thumbnail || '',
+      format,
+      mime: item?.mime || '',
+      savedAt: Number(item?.timestamp || Date.now()),
+      exists: item?.exists !== false,
+    };
+  }
+
+  function syncDownloadsHistoryFromNative() {
+    if (!isNative() || typeof ReClip.getDownloadHistory !== 'function') return false;
+    try {
+      const nativeRaw = ReClip.getDownloadHistory();
+      const nativeArr = JSON.parse(nativeRaw || '[]');
+      if (!Array.isArray(nativeArr)) return false;
+      downloadsHistory = nativeArr.map(mapNativeHistoryItem);
+      saveDownloadsHistory();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 
   function loadDownloadsHistory() {
-    try {
-      const raw = localStorage.getItem(HISTORY_KEY);
-      downloadsHistory = raw ? JSON.parse(raw) : [];
-    } catch (e) {
-      downloadsHistory = [];
+    const synced = syncDownloadsHistoryFromNative();
+    if (!synced) {
+      try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        downloadsHistory = raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        downloadsHistory = [];
+      }
     }
     // Seed demo entries on first run in demo mode (browser preview)
     if (!isNative() && !downloadsHistory.length) {
@@ -3026,6 +3058,7 @@
 
   function openDownloads() {
     if (window.navigator.vibrate) navigator.vibrate(15);
+    syncDownloadsHistoryFromNative();
     renderDownloadsList();
     document.getElementById('sheetBackdrop').classList.add('open');
     document.getElementById('downloadsSheet').classList.add('open');
@@ -3048,6 +3081,9 @@
   function clearDownloadsHistory() {
     if (!downloadsHistory.length) return;
     if (!confirm('Clear all download history? This only removes the list — your files stay in Downloads/ReClip.')) return;
+    if (isNative() && typeof ReClip.clearHistory === 'function') {
+      try { ReClip.clearHistory(); } catch (e) {}
+    }
     downloadsHistory = [];
     saveDownloadsHistory();
     renderDownloadsList();
@@ -3057,6 +3093,9 @@
   function deleteHistoryEntry(index) {
     const entry = filteredHistory()[index];
     if (!entry) return;
+    if (isNative() && entry.id && typeof ReClip.deleteHistoryItem === 'function') {
+      try { ReClip.deleteHistoryItem(entry.id, false); } catch (e) {}
+    }
     downloadsHistory = downloadsHistory.filter(e => e.filePath !== entry.filePath);
     saveDownloadsHistory();
     renderDownloadsList();
@@ -3584,6 +3623,13 @@
   document.addEventListener('DOMContentLoaded', () => {
     loadDownloadsHistory();
     renderResults();
+    if (isNative()) {
+      setInterval(() => {
+        if (syncDownloadsHistoryFromNative()) {
+          updateDownloadsBadge();
+        }
+      }, 6000);
+    }
 
     if (isNative()) {
       try {
