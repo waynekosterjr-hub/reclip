@@ -602,7 +602,7 @@ public class MainActivity extends AppCompatActivity {
                         if (publicPath != null) {
                             obj.put("file", publicPath);
                             obj.put("public_uri", publicPath);
-                            addToHistory(
+                            String historyId = addToHistory(
                                 obj.optString("filename", ""),
                                 publicPath,
                                 obj.optLong("size", 0),
@@ -611,6 +611,9 @@ public class MainActivity extends AppCompatActivity {
                                 formatChoice,
                                 mimeType
                             );
+                            if (historyId != null && !historyId.isEmpty()) {
+                                obj.put("historyId", historyId);
+                            }
                         } else {
                             obj.put("success", false);
                             obj.put("error", "Failed to save to Downloads. Check permissions.");
@@ -1146,13 +1149,14 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void addToHistory(String filename, String path, long size,
+    private String addToHistory(String filename, String path, long size,
                               String sourceUrl, String title, String type, String mime) {
         try {
             org.json.JSONArray arr = loadHistory();
             org.json.JSONObject entry = new org.json.JSONObject();
-            entry.put("id", "dl_" + System.currentTimeMillis() + "_" +
-                              (int)(Math.random() * 10000));
+            String historyId = "dl_" + System.currentTimeMillis() + "_" +
+                              (int)(Math.random() * 10000);
+            entry.put("id", historyId);
             entry.put("filename", filename);
             entry.put("path", path);
             entry.put("size", size);
@@ -1175,9 +1179,11 @@ public class MainActivity extends AppCompatActivity {
                 newArr = capped;
             }
             saveHistory(newArr);
+            return historyId;
         } catch (Exception e) {
             Log.e(TAG, "addToHistory failed", e);
         }
+        return null;
     }
 
     private boolean fileStillExists(String pathOrUri) {

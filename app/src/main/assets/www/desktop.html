@@ -97,6 +97,20 @@
       box-shadow: 0 0 24px rgba(23, 199, 255, .24);
     }
     .status-list { display: grid; gap: 10px; }
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .metric {
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,.04);
+    }
+    .metric b { display: block; font-size: 18px; color: #17c7ff; }
+    .metric span { color: var(--muted); font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
     .status-row { padding: 14px; background: rgba(255,255,255,.04); border-radius: 16px; border: 1px solid rgba(255,255,255,.055); }
     .status-row b { display: block; margin-bottom: 3px; }
     .status-row span { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; }
@@ -133,6 +147,11 @@
           <button id="modeVideo" class="active" onclick="setMode('video')">Video</button>
           <button id="modeAudio" onclick="setMode('audio')">Audio</button>
         </div>
+        <p class="section-label">Download Destination</p>
+        <div class="seg">
+          <button id="destComputer" class="active" onclick="setDestination('computer')">Computer (default)</button>
+          <button id="destPhone" onclick="setDestination('phone')">Phone</button>
+        </div>
         <div class="profile" id="profilePicker">
           <p class="section-label">Audio Profile</p>
           <button data-profile="mp3_320_cbr" onclick="setProfile(this)">Broadcast Master<small>MP3 320kbps CBR</small></button>
@@ -155,6 +174,12 @@
 
       <aside class="panel panel-pad">
         <p class="section-label">Phone Status</p>
+        <div class="metrics-grid" id="metricsGrid">
+          <div class="metric"><span>Active Jobs</span><b>0</b></div>
+          <div class="metric"><span>Total Jobs</span><b>0</b></div>
+          <div class="metric"><span>Completed</span><b>0</b></div>
+          <div class="metric"><span>Failed</span><b>0</b></div>
+        </div>
         <div class="status-list" id="statusList"></div>
         <p class="section-label" style="margin-top:20px">Recent Files</p>
         <div class="status-list" id="historyList"></div>
@@ -178,6 +203,7 @@
     let token = localStorage.getItem(TOKEN_KEY) || '';
     let mode = 'video';
     let audioProfile = 'mp3_256_cbr';
+    let destination = 'computer';
     let fetched = [];
     let selectedFormat = {};
     let autoFetchTimer = null;
@@ -229,6 +255,11 @@
     function setProfile(btn) {
       audioProfile = btn.dataset.profile;
       document.querySelectorAll('#profilePicker button').forEach(b => b.classList.toggle('active', b === btn));
+    }
+    function setDestination(next) {
+      destination = next === 'phone' ? 'phone' : 'computer';
+      document.getElementById('destComputer').classList.toggle('active', destination === 'computer');
+      document.getElementById('destPhone').classList.toggle('active', destination === 'phone');
     }
     async function fetchInfo() {
       const url = document.getElementById('urlInput').value.trim();
@@ -322,7 +353,8 @@
           formatChoice: mode,
           formatId: mode === 'video' ? (selectedFormat[i] || selectedFormat[0] || '') : '',
           title: item.title || '',
-          audioProfile
+          audioProfile,
+          destination
         })});
         pollJob(job.jobId, i);
       } catch (e) {
@@ -338,6 +370,14 @@
         try {
           const job = await api('/api/progress/' + encodeURIComponent(id));
           if (node) node.textContent = `${job.status} ${job.percent || 0}% - ${job.message || ''}`;
+          if (job.status === 'done' && destination === 'computer' && job.result?.desktopFileUrl) {
+            const link = document.createElement('a');
+            link.href = job.result.desktopFileUrl;
+            link.download = '';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+          }
           if (job.status === 'done' || job.status === 'error') {
             refresh();
             return;
@@ -352,6 +392,7 @@
     async function refresh() {
       try {
         const status = await api('/api/status');
+        const metrics = await api('/api/metrics');
         document.getElementById('pairScreen').classList.add('hidden');
         document.getElementById('connectionPill').textContent = status.desktop?.url || 'Connected';
         const rows = [
@@ -362,6 +403,12 @@
           ['yt-dlp/ffmpeg', 'Available on phone']
         ];
         document.getElementById('statusList').innerHTML = rows.map(row => `<div class="status-row"><b>${escapeHtml(row[0])}</b><span>${escapeHtml(row[1])}</span></div>`).join('');
+        document.getElementById('metricsGrid').innerHTML = [
+          ['Active Jobs', metrics.activeJobs ?? 0],
+          ['Total Jobs', metrics.totalJobs ?? 0],
+          ['Completed', metrics.completedJobs ?? 0],
+          ['Failed', metrics.failedJobs ?? 0]
+        ].map(([label, value]) => `<div class="metric"><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>`).join('');
         const history = await api('/api/history');
         document.getElementById('historyList').innerHTML = (Array.isArray(history) ? history.slice(0, 6) : []).map(item => {
           const fileUrl = '/api/file/' + encodeURIComponent(item.id) + '?token=' + encodeURIComponent(token);

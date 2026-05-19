@@ -31,6 +31,9 @@ class DesktopServerManager {
     private final SecureRandom random = new SecureRandom();
     private final Map<String, JobState> jobs = new ConcurrentHashMap<>();
     private final AtomicInteger activeJobs = new AtomicInteger(0);
+    private final AtomicInteger totalJobs = new AtomicInteger(0);
+    private final AtomicInteger completedJobs = new AtomicInteger(0);
+    private final AtomicInteger failedJobs = new AtomicInteger(0);
 
     private LocalServer server;
     private int port = DEFAULT_PORT;
@@ -50,6 +53,9 @@ class DesktopServerManager {
         token = UUID.randomUUID().toString();
         paired = false;
         jobs.clear();
+        totalJobs.set(0);
+        completedJobs.set(0);
+        failedJobs.set(0);
 
         Exception lastError = null;
         for (int candidate = DEFAULT_PORT; candidate <= MAX_PORT; candidate++) {
@@ -78,6 +84,9 @@ class DesktopServerManager {
         token = "";
         jobs.clear();
         activeJobs.set(0);
+        totalJobs.set(0);
+        completedJobs.set(0);
+        failedJobs.set(0);
         Log.i(TAG, "Desktop server stopped");
     }
 
@@ -189,6 +198,7 @@ class DesktopServerManager {
                 }
 
                 if ("/api/status".equals(uri) && Method.GET.equals(method)) return status();
+                if ("/api/metrics".equals(uri) && Method.GET.equals(method)) return metrics();
                 if ("/api/info".equals(uri) && Method.POST.equals(method)) return info(session);
                 if ("/api/download".equals(uri) && Method.POST.equals(method)) return download(session);
                 if (uri.startsWith("/api/progress/") && Method.GET.equals(method)) {
@@ -238,6 +248,23 @@ class DesktopServerManager {
             return json(200, out);
         }
 
+        private Response metrics() {
+            try {
+                JSONObject out = new JSONObject();
+                out.put("success", true);
+                out.put("activeJobs", activeJobs.get());
+                out.put("totalJobs", totalJobs.get());
+                out.put("completedJobs", completedJobs.get());
+                out.put("failedJobs", failedJobs.get());
+                out.put("paired", paired);
+                out.put("serverUrl", getUrl());
+                out.put("historyCount", new org.json.JSONArray(activity.getDownloadHistoryJson()).length());
+                return json(200, out);
+            } catch (Exception e) {
+                return json(500, error(e.getMessage()));
+            }
+        }
+
         private Response info(IHTTPSession session) throws Exception {
             JSONObject body = body(session);
             String url = body.optString("url", "");
@@ -251,10 +278,12 @@ class DesktopServerManager {
             JobState job = new JobState(id);
             jobs.put(id, job);
             activeJobs.incrementAndGet();
+            totalJobs.incrementAndGet();
+            final String destination = body.optString("destination", "computer");
             jobExecutor.execute(() -> {
                 job.status = "running";
                 job.percent = 5;
-                job.message = "Downloading on phone";
+                job.message = "Downloading on phone engine";
                 String resultJson = activity.startDownloadForDesktop(
                     body.optString("url", ""),
                     body.optString("formatChoice", "video"),
@@ -268,11 +297,26 @@ class DesktopServerManager {
                     boolean ok = result.optBoolean("success", false);
                     job.status = ok ? "done" : "error";
                     job.percent = ok ? 100 : 0;
-                    job.message = ok ? "Done" : result.optString("error", "Download failed");
+                    if (ok) {
+                        completedJobs.incrementAndGet();
+                        String historyId = result.optString("historyId", "");
+                        if (!historyId.isEmpty() && "computer".equalsIgnoreCase(destination)) {
+                            String encodedId = java.net.URLEncoder.encode(historyId, StandardCharsets.UTF_8.name());
+                            String encodedToken = java.net.URLEncoder.encode(token, StandardCharsets.UTF_8.name());
+                            job.message = "Done";
+                            result.put("desktopFileUrl", "/api/file/" + encodedId + "?token=" + encodedToken);
+                        } else {
+                            job.message = "Saved to phone";
+                        }
+                    } else {
+                        failedJobs.incrementAndGet();
+                        job.message = result.optString("error", "Download failed");
+                    }
                 } catch (Exception e) {
                     job.status = "error";
                     job.percent = 0;
                     job.message = e.getMessage();
+                    failedJobs.incrementAndGet();
                 } finally {
                     activeJobs.decrementAndGet();
                 }
