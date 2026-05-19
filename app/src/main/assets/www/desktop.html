@@ -92,6 +92,10 @@
     .meta { color: var(--muted); font-weight: 750; }
     .card-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
     .download { flex: 1; min-width: 190px; }
+    .primary.download {
+      background: linear-gradient(100deg, #1698ff, #17c7ff);
+      box-shadow: 0 0 24px rgba(23, 199, 255, .24);
+    }
     .status-list { display: grid; gap: 10px; }
     .status-row { padding: 14px; background: rgba(255,255,255,.04); border-radius: 16px; border: 1px solid rgba(255,255,255,.055); }
     .status-row b { display: block; margin-bottom: 3px; }
@@ -176,6 +180,9 @@
     let audioProfile = 'mp3_256_cbr';
     let fetched = [];
     let selectedFormat = {};
+    let autoFetchTimer = null;
+    let fetchInFlight = false;
+    let lastFetchedUrl = '';
 
     function authHeaders() {
       return token ? { 'Authorization': 'Bearer ' + token } : {};
@@ -226,10 +233,13 @@
     async function fetchInfo() {
       const url = document.getElementById('urlInput').value.trim();
       if (!url) return toast('Paste a URL first');
+      if (fetchInFlight) return;
+      fetchInFlight = true;
       document.getElementById('results').innerHTML = '<div class="empty">Fetching metadata from the phone...</div>';
       try {
         const info = await api('/api/info', { method:'POST', body: JSON.stringify({ url }) });
         fetched = Array.isArray(info.items) ? info.items : [info];
+        lastFetchedUrl = url;
         selectedFormat = {};
         fetched.forEach((item, i) => {
           if (Array.isArray(item.formats) && item.formats[0]) selectedFormat[i] = item.formats[0].id || '';
@@ -238,7 +248,17 @@
         renderResults();
       } catch (e) {
         document.getElementById('results').innerHTML = `<div class="empty">${escapeHtml(e.message)}</div>`;
+      } finally {
+        fetchInFlight = false;
       }
+    }
+    function queueAutoFetch() {
+      if (autoFetchTimer) clearTimeout(autoFetchTimer);
+      autoFetchTimer = setTimeout(() => {
+        const url = document.getElementById('urlInput').value.trim();
+        if (!url || url === lastFetchedUrl || fetchInFlight) return;
+        fetchInfo();
+      }, 600);
     }
     function renderQuality() {
       const wrap = document.getElementById('qualityPicker');
@@ -362,6 +382,13 @@
       return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
     function escapeAttr(value) { return escapeHtml(value).replace(/`/g, '&#96;'); }
+    const urlInput = document.getElementById('urlInput');
+    urlInput.addEventListener('input', queueAutoFetch);
+    urlInput.addEventListener('paste', () => setTimeout(queueAutoFetch, 0));
+    urlInput.addEventListener('blur', () => {
+      const url = urlInput.value.trim();
+      if (url && url !== lastFetchedUrl && !fetchInFlight) fetchInfo();
+    });
     refresh();
     syncModeControls();
     renderQuality();

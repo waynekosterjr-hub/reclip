@@ -2267,6 +2267,7 @@
   const AUDIO_PROFILE_KEYS = ['mp3_320_cbr', 'mp3_v0_vbr', 'mp3_256_cbr', 'flac_lossless'];
   const VIDEO_QUALITY_PREF_KEY = 'reclip_video_quality_pref';
   const AUTO_FETCH_PREF_KEY = 'reclip_auto_fetch_pref';
+  const DESKTOP_BG_PROMPT_KEY = 'reclip_desktop_bg_prompted';
   let currentFormat = 'video';
   let currentAudioProfile = AUDIO_PROFILE_DEFAULT;
   let autoFetchEnabled = true;
@@ -2401,11 +2402,42 @@
       renderDesktopModeStatus(res);
       document.getElementById('settingsRuntimeList').innerHTML = renderDiagnosticsRows().join('');
       showToast(enable ? 'Desktop Mode is running' : 'Desktop Mode stopped');
+      if (enable && res && res.running) {
+        maybePromptDesktopBackgroundUsage();
+      }
     });
     try {
       ReClip.setDesktopServerEnabled(enable, cbId);
     } catch (e) {
       showToast('Desktop Mode unavailable', true);
+    }
+  }
+
+  function maybePromptDesktopBackgroundUsage() {
+    if (!isNative() || typeof ReClip.isIgnoringBatteryOptimizations !== 'function' ||
+        typeof ReClip.openBackgroundUsageSettings !== 'function') return;
+    try {
+      const ignored = !!ReClip.isIgnoringBatteryOptimizations();
+      if (ignored) return;
+
+      let prompt = true;
+      try {
+        prompt = localStorage.getItem(DESKTOP_BG_PROMPT_KEY) !== '1';
+      } catch (e) {}
+
+      if (!prompt) return;
+
+      const accepted = window.confirm(
+        'For faster Desktop Mode in the background, set Battery to Unrestricted now?'
+      );
+      try { localStorage.setItem(DESKTOP_BG_PROMPT_KEY, '1'); } catch (e) {}
+      if (accepted) {
+        ReClip.openBackgroundUsageSettings();
+      } else {
+        showToast('You can enable Unrestricted battery later in Settings');
+      }
+    } catch (e) {
+      // Ignore prompt failures; desktop mode still runs.
     }
   }
 
@@ -3418,6 +3450,7 @@
         rows.push(runtimeRow('Package', info.appPackage || 'unknown'));
         rows.push(runtimeRow('Android SDK', info.sdkInt || 'unknown'));
         rows.push(runtimeRow('Pro unlocked', info.isPro ? 'yes' : 'no'));
+        rows.push(runtimeRow('Battery unrestricted', info.ignoringBatteryOptimizations ? 'yes' : 'no'));
         rows.push(runtimeRow('Native lib dir', info.nativeLibraryDir || 'n/a'));
         rows.push(runtimeRow('Writable ffmpeg dir', info.writableFfmpegDir || 'n/a'));
         rows.push(runtimeRow('Bundled ffmpeg path', info.bundledFfmpegPath || 'n/a'));

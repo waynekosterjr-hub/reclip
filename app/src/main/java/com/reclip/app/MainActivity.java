@@ -1,8 +1,6 @@
 package com.reclip.app;
 
 import android.Manifest;
-import android.app.Notification;
-import android.app.PendingIntent;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ContentResolver;
@@ -17,7 +15,9 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
@@ -28,8 +28,6 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
@@ -51,7 +49,6 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "ReClip";
     static final String ACTION_STOP_DESKTOP_SERVER = "com.reclip.app.STOP_DESKTOP_SERVER";
-    private static final int DESKTOP_NOTIFICATION_ID = 42;
     private WebView webView;
     private PaywallLauncher paywallLauncher;
     private DesktopServerManager desktopServerManager;
@@ -242,10 +239,9 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        if (desktopServerManager != null) {
+        if (desktopServerManager != null && !desktopServerManager.getStatus().running) {
             desktopServerManager.stopServer();
         }
-        hideDesktopServerNotification();
         super.onDestroy();
     }
 
@@ -468,6 +464,7 @@ public class MainActivity extends AppCompatActivity {
             out.put("sdkInt", Build.VERSION.SDK_INT);
             out.put("appPackage", getPackageName());
             out.put("isPro", RevenueCatManager.INSTANCE.isPro());
+            out.put("ignoringBatteryOptimizations", isIgnoringBatteryOptimizations());
             return out.toString();
         } catch (Exception e) {
             return jsonError(e.getMessage());
@@ -680,7 +677,7 @@ public class MainActivity extends AppCompatActivity {
             }
             if (enabled) {
                 desktopServerManager.startServer();
-                showDesktopServerNotification();
+                startDesktopModeForegroundService();
             } else {
                 stopDesktopServer();
             }
@@ -700,39 +697,60 @@ public class MainActivity extends AppCompatActivity {
         if (desktopServerManager != null) {
             desktopServerManager.stopServer();
         }
-        hideDesktopServerNotification();
+        stopDesktopModeForegroundService();
         postToWebView("if(window.onDesktopServerChanged)window.onDesktopServerChanged(" + getDesktopServerStatusJson() + ");");
     }
 
-    private void showDesktopServerNotification() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
-        Intent stopIntent = new Intent(this, MainActivity.class);
-        stopIntent.setAction(ACTION_STOP_DESKTOP_SERVER);
-        stopIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent pendingIntent = PendingIntent.getActivity(
-            this,
-            420,
-            stopIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
-        Notification n = new NotificationCompat.Builder(this, "reclip_downloads")
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("ReClip Desktop Mode is running")
-            .setContentText("Tap to close the desktop server")
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build();
-        NotificationManagerCompat.from(this).notify(DESKTOP_NOTIFICATION_ID, n);
+    private void startDesktopModeForegroundService() {
+        Intent i = new Intent(this, DesktopModeService.class);
+        i.setAction(DesktopModeService.ACTION_START);
+        ContextCompat.startForegroundService(this, i);
     }
 
-    private void hideDesktopServerNotification() {
-        NotificationManagerCompat.from(this).cancel(DESKTOP_NOTIFICATION_ID);
+    private void stopDesktopModeForegroundService() {
+        Intent i = new Intent(this, DesktopModeService.class);
+        i.setAction(DesktopModeService.ACTION_STOP);
+        startService(i);
+    }
+
+    boolean isIgnoringBatteryOptimizations() {
+        try {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            return pm != null && pm.isIgnoringBatteryOptimizations(getPackageName());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    void openBackgroundUsageSettings() {
+        mainHandler.post(() -> {
+            Intent intent = null;
+            try {
+                if (!isIgnoringBatteryOptimizations()) {
+                    Intent requestIgnore = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                    requestIgnore.setData(Uri.parse("package:" + getPackageName()));
+                    if (requestIgnore.resolveActivity(getPackageManager()) != null) {
+                        intent = requestIgnore;
+                    }
+                }
+                if (intent == null) {
+                    Intent optimizeSettings = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+                    if (optimizeSettings.resolveActivity(getPackageManager()) != null) {
+                        intent = optimizeSettings;
+                    }
+                }
+                if (intent == null) {
+                    Intent appDetails = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                    appDetails.setData(Uri.parse("package:" + getPackageName()));
+                    intent = appDetails;
+                }
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to open background usage settings", e);
+                Toast.makeText(MainActivity.this, "Unable to open battery settings", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     /**
@@ -1000,6 +1018,16 @@ public class MainActivity extends AppCompatActivity {
                 String json = MainActivity.this.setDesktopServerEnabled(enabled);
                 postToWebView("window._nativeCallback('" + callbackId + "', " + json + ");");
             });
+        }
+
+        @JavascriptInterface
+        public boolean isIgnoringBatteryOptimizations() {
+            return MainActivity.this.isIgnoringBatteryOptimizations();
+        }
+
+        @JavascriptInterface
+        public void openBackgroundUsageSettings() {
+            MainActivity.this.openBackgroundUsageSettings();
         }
 
         @JavascriptInterface
