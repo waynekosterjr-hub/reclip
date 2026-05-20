@@ -2,7 +2,7 @@ name: README Governance Check
 
 on:
   pull_request:
-    branches: [ main, android, Codex ]
+    branches: [ main, android, Android-Release ]
   push:
     branches: [ "**" ]
     tags-ignore: [ "**" ]

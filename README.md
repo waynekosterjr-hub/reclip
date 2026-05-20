@@ -84,7 +84,7 @@ Before each push, refresh this README summary to reflect:
 - build/install status,
 - any new Settings/Desktop behavior.
 
-That keeps `Codex` branch docs aligned with shipped behavior.
+That keeps `Android-Release` branch docs aligned with shipped behavior.
 
 Material product changes that touch UI, runtime/server, engine, or billing paths are expected to include a README update. This is enforced by `.github/workflows/readme-policy.yml`.
 
