@@ -13,6 +13,7 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
 public class DesktopModeService extends Service {
+    private static final String CHANNEL_ID = "reclip_desktop_mode";
     static final String ACTION_START = "com.reclip.app.DESKTOP_MODE_START";
     static final String ACTION_STOP = "com.reclip.app.DESKTOP_MODE_STOP";
     private static final int NOTIFICATION_ID = 42;
@@ -50,13 +51,14 @@ public class DesktopModeService extends Service {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        return new NotificationCompat.Builder(this, "reclip_downloads")
+        return new NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("ReClip Desktop Mode is running")
             .setContentText("Tap to close the desktop server")
             .setContentIntent(pendingStop)
             .setOnlyAlertOnce(true)
             .setOngoing(true)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build();
     }

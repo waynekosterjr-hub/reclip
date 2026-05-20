@@ -609,7 +609,8 @@ public class MainActivity extends AppCompatActivity {
                                 url,
                                 title,
                                 formatChoice,
-                                mimeType
+                                mimeType,
+                                obj.optString("thumbnail", "")
                             );
                             if (historyId != null && !historyId.isEmpty()) {
                                 obj.put("historyId", historyId);
@@ -1150,7 +1151,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String addToHistory(String filename, String path, long size,
-                              String sourceUrl, String title, String type, String mime) {
+                              String sourceUrl, String title, String type, String mime,
+                              String thumbnail) {
         try {
             org.json.JSONArray arr = loadHistory();
             org.json.JSONObject entry = new org.json.JSONObject();
@@ -1164,6 +1166,7 @@ public class MainActivity extends AppCompatActivity {
             entry.put("title", title);
             entry.put("type", type);          // "video" or "audio"
             entry.put("mime", mime);
+            entry.put("thumbnail", thumbnail == null ? "" : thumbnail);
             entry.put("timestamp", System.currentTimeMillis());
 
             // Insert at front (most recent first)

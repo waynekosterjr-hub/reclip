@@ -767,6 +767,11 @@ def download_media(url, output_dir, format_choice='video', format_id=None, title
 
         if downloaded_file and os.path.exists(downloaded_file):
             file_size = os.path.getsize(downloaded_file)
+            result_thumbnail = (
+                source_info.get('thumbnail')
+                or _best_thumbnail_url_from_info(source_info)
+                or ''
+            )
             if not downloaded_thumb:
                 base = os.path.splitext(downloaded_file)[0]
                 for ext in ('.jpg', '.jpeg', '.webp', '.png'):
@@ -779,6 +784,7 @@ def download_media(url, output_dir, format_choice='video', format_id=None, title
                 'file': downloaded_file,
                 'filename': os.path.basename(downloaded_file),
                 'size': file_size,
+                'thumbnail': result_thumbnail,
             }
             # Keep artwork embedded in the media file; don't expose sidecar image files.
             return json.dumps(result)

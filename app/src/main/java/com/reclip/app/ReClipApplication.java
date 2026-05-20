@@ -44,9 +44,19 @@ public class ReClipApplication extends Application {
             );
             channel.setDescription(getString(R.string.download_channel_desc));
             channel.setShowBadge(false);
+
+            NotificationChannel desktopChannel = new NotificationChannel(
+                "reclip_desktop_mode",
+                getString(R.string.desktop_mode_channel),
+                NotificationManager.IMPORTANCE_LOW
+            );
+            desktopChannel.setDescription(getString(R.string.desktop_mode_channel_desc));
+            desktopChannel.setShowBadge(false);
+
             NotificationManager nm = getSystemService(NotificationManager.class);
             if (nm != null) {
                 nm.createNotificationChannel(channel);
+                nm.createNotificationChannel(desktopChannel);
             }
         }
     }
