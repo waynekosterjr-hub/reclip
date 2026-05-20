@@ -58,6 +58,7 @@ adb -t <transport_id> install -r app\build\outputs\apk\debug\app-debug.apk
 - Attached artifacts:
   - `ReClip-beta-debug.apk`
   - `ReClip-beta-release-unsigned.apk`
+- Release notes are required to be concrete (no placeholder sections) for each beta tag.
 
 ## ✅ Quick Validation
 
@@ -86,3 +87,5 @@ Before each push, refresh this README summary to reflect:
 That keeps `Codex` branch docs aligned with shipped behavior.
 
 Material product changes that touch UI, runtime/server, engine, or billing paths are expected to include a README update. This is enforced by `.github/workflows/readme-policy.yml`.
+
+Current beta hardening focus includes Desktop Mode session resilience, deterministic destination behavior, and canonical native history sync across phone and desktop surfaces.

@@ -2965,6 +2965,7 @@
       thumbnail: item?.thumbnail || '',
       format,
       mime: item?.mime || '',
+      sourceUrl: item?.sourceUrl || '',
       savedAt: Number(item?.timestamp || Date.now()),
       exists: item?.exists !== false,
     };
@@ -3037,8 +3038,14 @@
   }
 
   function addToDownloadsHistory(entry) {
-    // Avoid exact duplicates (same filePath)
-    downloadsHistory = downloadsHistory.filter(e => e.filePath !== entry.filePath);
+    // De-dup by stable native id first, fallback to file path.
+    const incomingId = entry?.id || '';
+    const incomingPath = entry?.filePath || '';
+    downloadsHistory = downloadsHistory.filter(e => {
+      if (incomingId && e.id === incomingId) return false;
+      if (incomingPath && e.filePath === incomingPath) return false;
+      return true;
+    });
     downloadsHistory.unshift(entry);
     // Cap at 100 entries
     if (downloadsHistory.length > 100) downloadsHistory.length = 100;
@@ -3096,7 +3103,11 @@
     if (isNative() && entry.id && typeof ReClip.deleteHistoryItem === 'function') {
       try { ReClip.deleteHistoryItem(entry.id, false); } catch (e) {}
     }
-    downloadsHistory = downloadsHistory.filter(e => e.filePath !== entry.filePath);
+    downloadsHistory = downloadsHistory.filter(e => {
+      if (entry.id && e.id === entry.id) return false;
+      if (entry.filePath && e.filePath === entry.filePath) return false;
+      return true;
+    });
     saveDownloadsHistory();
     renderDownloadsList();
   }

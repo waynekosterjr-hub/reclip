@@ -25,6 +25,15 @@ Use this checklist for each beta cut.
 - (Optional device sanity):
   - `adb install -r app\build\outputs\apk\debug\app-debug.apk`
 
+### Smoke validation matrix (required)
+
+| Flow | Expected result | Pass/Fail |
+|---|---|---|
+| Mobile-only download flow | Fetch, download, and open/share work from phone UI |  |
+| Desktop -> Phone destination | Desktop-triggered save appears in phone Downloads + history |  |
+| Desktop -> Computer destination | Desktop receives file handoff link/download on completion |  |
+| History sync verification | Mobile and desktop history views converge within one poll interval |  |
+
 ## 4) Publish pre-release
 
 - Trigger `.github/workflows/beta-release.yml`:

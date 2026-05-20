@@ -41,6 +41,11 @@ class DesktopServerManager {
     private String pin = "";
     private String token = "";
     private boolean paired = false;
+    private String lastError = "";
+    private long lastCompletedAt = 0L;
+    private long lastFailedAt = 0L;
+    private long pairedAt = 0L;
+    private long serverStartedAt = 0L;
 
     DesktopServerManager(MainActivity activity) {
         this.activity = activity;
@@ -52,12 +57,17 @@ class DesktopServerManager {
         pin = String.format("%06d", random.nextInt(1_000_000));
         token = UUID.randomUUID().toString();
         paired = false;
+        pairedAt = 0L;
+        lastError = "";
+        lastCompletedAt = 0L;
+        lastFailedAt = 0L;
+        serverStartedAt = System.currentTimeMillis();
         jobs.clear();
         totalJobs.set(0);
         completedJobs.set(0);
         failedJobs.set(0);
 
-        Exception lastError = null;
+        Exception lastStartError = null;
         for (int candidate = DEFAULT_PORT; candidate <= MAX_PORT; candidate++) {
             try {
                 LocalServer candidateServer = new LocalServer(candidate);
@@ -67,11 +77,12 @@ class DesktopServerManager {
                 Log.i(TAG, "Desktop server started at " + getUrl());
                 return;
             } catch (Exception e) {
-                lastError = e;
+                lastError = e.getMessage() == null ? "Port bind failed" : e.getMessage();
+                lastStartError = e;
                 Log.w(TAG, "Port " + candidate + " unavailable", e);
             }
         }
-        throw lastError != null ? lastError : new IllegalStateException("No desktop server port available");
+        throw lastStartError != null ? lastStartError : new IllegalStateException("No desktop server port available");
     }
 
     synchronized void stopServer() {
@@ -80,6 +91,7 @@ class DesktopServerManager {
             server = null;
         }
         paired = false;
+        pairedAt = 0L;
         pin = "";
         token = "";
         jobs.clear();
@@ -92,7 +104,18 @@ class DesktopServerManager {
 
     synchronized Status getStatus() {
         boolean running = server != null && server.wasStarted();
-        return new Status(running, running ? getUrl() : "", pin, paired, activeJobs.get());
+        return new Status(
+            running,
+            running ? getUrl() : "",
+            pin,
+            paired,
+            activeJobs.get(),
+            lastError,
+            lastCompletedAt,
+            lastFailedAt,
+            pairedAt,
+            serverStartedAt
+        );
     }
 
     synchronized String getStatusJson() {
@@ -126,17 +149,38 @@ class DesktopServerManager {
         final String pin;
         final boolean paired;
         final int activeJobs;
+        final String lastError;
+        final long lastCompletedAt;
+        final long lastFailedAt;
+        final long pairedAt;
+        final long serverStartedAt;
 
-        Status(boolean running, String url, String pin, boolean paired, int activeJobs) {
+        Status(
+            boolean running,
+            String url,
+            String pin,
+            boolean paired,
+            int activeJobs,
+            String lastError,
+            long lastCompletedAt,
+            long lastFailedAt,
+            long pairedAt,
+            long serverStartedAt
+        ) {
             this.running = running;
             this.url = url == null ? "" : url;
             this.pin = pin == null ? "" : pin;
             this.paired = paired;
             this.activeJobs = activeJobs;
+            this.lastError = lastError == null ? "" : lastError;
+            this.lastCompletedAt = lastCompletedAt;
+            this.lastFailedAt = lastFailedAt;
+            this.pairedAt = pairedAt;
+            this.serverStartedAt = serverStartedAt;
         }
 
         static Status off() {
-            return new Status(false, "", "", false, 0);
+            return new Status(false, "", "", false, 0, "", 0L, 0L, 0L, 0L);
         }
 
         JSONObject toJson() {
@@ -148,6 +192,11 @@ class DesktopServerManager {
                 out.put("pin", pin);
                 out.put("paired", paired);
                 out.put("activeJobs", activeJobs);
+                out.put("lastError", lastError);
+                out.put("lastCompletedAt", lastCompletedAt);
+                out.put("lastFailedAt", lastFailedAt);
+                out.put("pairedAt", pairedAt);
+                out.put("serverStartedAt", serverStartedAt);
             } catch (Exception ignored) {}
             return out;
         }
@@ -237,6 +286,8 @@ class DesktopServerManager {
                 return json(403, error("Wrong PIN"));
             }
             paired = true;
+            pairedAt = System.currentTimeMillis();
+            lastError = "";
             JSONObject out = getStatus().toJson();
             out.put("token", token);
             return json(200, out);
@@ -259,6 +310,10 @@ class DesktopServerManager {
                 out.put("paired", paired);
                 out.put("serverUrl", getUrl());
                 out.put("historyCount", new org.json.JSONArray(activity.getDownloadHistoryJson()).length());
+                int done = completedJobs.get();
+                int failed = failedJobs.get();
+                int denom = done + failed;
+                out.put("successRate", denom > 0 ? (done * 100.0 / denom) : JSONObject.NULL);
                 return json(200, out);
             } catch (Exception e) {
                 return json(500, error(e.getMessage()));
@@ -299,24 +354,34 @@ class DesktopServerManager {
                     job.percent = ok ? 100 : 0;
                     if (ok) {
                         completedJobs.incrementAndGet();
+                        lastCompletedAt = System.currentTimeMillis();
+                        lastError = "";
                         String historyId = result.optString("historyId", "");
-                        if (!historyId.isEmpty() && "computer".equalsIgnoreCase(destination)) {
-                            String encodedId = java.net.URLEncoder.encode(historyId, StandardCharsets.UTF_8.name());
-                            String encodedToken = java.net.URLEncoder.encode(token, StandardCharsets.UTF_8.name());
-                            job.message = "Done";
-                            result.put("desktopFileUrl", "/api/file/" + encodedId + "?token=" + encodedToken);
+                        if ("computer".equalsIgnoreCase(destination)) {
+                            if (!historyId.isEmpty()) {
+                                String encodedId = java.net.URLEncoder.encode(historyId, StandardCharsets.UTF_8.name());
+                                String encodedToken = java.net.URLEncoder.encode(token, StandardCharsets.UTF_8.name());
+                                job.message = "Done";
+                                result.put("desktopFileUrl", "/api/file/" + encodedId + "?token=" + encodedToken);
+                            } else {
+                                job.message = "Done (desktop link unavailable)";
+                            }
                         } else {
                             job.message = "Saved to phone";
                         }
                     } else {
                         failedJobs.incrementAndGet();
                         job.message = result.optString("error", "Download failed");
+                        lastFailedAt = System.currentTimeMillis();
+                        lastError = job.message;
                     }
                 } catch (Exception e) {
                     job.status = "error";
                     job.percent = 0;
                     job.message = e.getMessage();
                     failedJobs.incrementAndGet();
+                    lastFailedAt = System.currentTimeMillis();
+                    lastError = job.message;
                 } finally {
                     activeJobs.decrementAndGet();
                 }

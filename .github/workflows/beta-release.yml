@@ -113,15 +113,19 @@ jobs:
             RANGE="Initial beta release"
           fi
 
+          RECENT_COMMITS=$(git log --oneline -n 12 | sed 's/^/- /')
           cat > beta-release-notes.md <<EOF
           ## Highlights
-          - Summarize major UX and feature updates in this beta.
+          - Desktop Mode reliability and session handling improvements.
+          - Download history consistency and cross-surface synchronization.
+          - Runtime/metrics visibility improvements for beta validation.
 
           ## Breaking / Behavior Changes
-          - Note any changed defaults, routing, or download behavior.
+          - Verify Desktop destination handling (`computer` vs `phone`) against your existing test scripts.
 
           ## Known Issues
-          - List current known issues and workarounds.
+          - Release artifact remains unsigned for tester distribution.
+          - Some LAN environments may require router/AP isolation to be disabled for desktop pairing.
 
           ## Install
           - Download \`ReClip-beta-debug.apk\` (recommended for testing) or \`ReClip-beta-release-unsigned.apk\`.
@@ -130,7 +134,18 @@ jobs:
 
           ## Commit Range
           - ${RANGE}
+
+          ## Recent Commits
+          ${RECENT_COMMITS}
           EOF
+
+      - name: Validate release notes are concrete
+        shell: bash
+        run: |
+          if grep -Eiq "summarize|note any|list current known issues|placeholder|TODO" beta-release-notes.md; then
+            echo "Release notes contain placeholder text. Please provide concrete notes."
+            exit 1
+          fi
 
       - name: Publish GitHub pre-release
         uses: softprops/action-gh-release@v2

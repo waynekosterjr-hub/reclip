@@ -67,7 +67,10 @@ jobs:
 
           if [ "$PRODUCT_CHANGED" -eq 1 ] && [ "$README_CHANGED" -eq 0 ]; then
             echo "README governance failure: material product changes detected without README.md update."
-            echo "Please update README.md with relevant feature/behavior/build notes."
+            echo "Please update README.md with:"
+            echo "- feature/support matrix updates"
+            echo "- behavior notes (Desktop Mode, routing, history sync, etc.)"
+            echo "- build/release notes when changed"
             exit 1
           fi
 

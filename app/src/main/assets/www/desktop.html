@@ -52,6 +52,17 @@
       overflow: hidden;
     }
     .panel-pad { padding: 20px; }
+    .panel.disabled-state { opacity: .55; pointer-events: none; }
+    .re-pair-banner {
+      margin: 0 0 14px;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(236,22,142,.45);
+      background: rgba(236,22,142,.12);
+      color: #ffd7eb;
+      font-weight: 700;
+      font-size: 13px;
+    }
     .section-label { color: var(--muted); font-size: 12px; letter-spacing: .3em; text-transform: uppercase; margin: 0 0 12px; }
     textarea {
       width: 100%; min-height: 190px; resize: vertical; color: var(--text);
@@ -142,6 +153,7 @@
     <main class="grid">
       <aside class="panel panel-pad">
         <p class="section-label">Control</p>
+        <div class="re-pair-banner hidden" id="rePairBanner">Session expired. Re-pair to continue using Desktop Mode.</div>
         <textarea id="urlInput" placeholder="Paste one or more media URLs"></textarea>
         <div class="seg">
           <button id="modeVideo" class="active" onclick="setMode('video')">Video</button>
@@ -209,9 +221,18 @@
     let autoFetchTimer = null;
     let fetchInFlight = false;
     let lastFetchedUrl = '';
+    let lastSessionValid = !!token;
+    let jobDestinations = {};
 
     function authHeaders() {
       return token ? { 'Authorization': 'Bearer ' + token } : {};
+    }
+    function setSessionState(valid) {
+      lastSessionValid = !!valid;
+      const leftPanel = document.querySelector('main .panel.panel-pad');
+      const banner = document.getElementById('rePairBanner');
+      if (leftPanel) leftPanel.classList.toggle('disabled-state', !lastSessionValid);
+      if (banner) banner.classList.toggle('hidden', lastSessionValid);
     }
     async function api(path, options = {}) {
       const headers = Object.assign({ 'Content-Type': 'application/json' }, authHeaders(), options.headers || {});
@@ -219,6 +240,7 @@
       if (res.status === 401 || res.status === 403) {
         localStorage.removeItem(TOKEN_KEY);
         token = '';
+        setSessionState(false);
         document.getElementById('pairScreen').classList.remove('hidden');
       }
       const data = await res.json();
@@ -239,6 +261,7 @@
         if (!res.ok || !data.token) throw new Error(data.error || 'Pairing failed');
         token = data.token;
         localStorage.setItem(TOKEN_KEY, token);
+        setSessionState(true);
         document.getElementById('pairScreen').classList.add('hidden');
         await refresh();
       } catch (e) {
@@ -356,6 +379,7 @@
           audioProfile,
           destination
         })});
+        jobDestinations[job.jobId] = destination;
         pollJob(job.jobId, i);
       } catch (e) {
         toast(e.message);
@@ -370,7 +394,8 @@
         try {
           const job = await api('/api/progress/' + encodeURIComponent(id));
           if (node) node.textContent = `${job.status} ${job.percent || 0}% - ${job.message || ''}`;
-          if (job.status === 'done' && destination === 'computer' && job.result?.desktopFileUrl) {
+          const jobDestination = jobDestinations[id] || 'computer';
+          if (job.status === 'done' && jobDestination === 'computer' && job.result?.desktopFileUrl) {
             const link = document.createElement('a');
             link.href = job.result.desktopFileUrl;
             link.download = '';
@@ -379,6 +404,7 @@
             link.remove();
           }
           if (job.status === 'done' || job.status === 'error') {
+            delete jobDestinations[id];
             refresh();
             return;
           }
@@ -393,12 +419,25 @@
       try {
         const status = await api('/api/status');
         const metrics = await api('/api/metrics');
+        const paired = !!status.desktop?.paired;
+        setSessionState(!!token && paired);
+        if (!paired) {
+          document.getElementById('pairScreen').classList.remove('hidden');
+          document.getElementById('pairError').textContent = 'Desktop server restarted or pairing expired. Enter the new PIN from your phone.';
+          return;
+        }
         document.getElementById('pairScreen').classList.add('hidden');
+        document.getElementById('pairError').textContent = '';
         document.getElementById('connectionPill').textContent = status.desktop?.url || 'Connected';
         const rows = [
           ['Desktop server', status.desktop?.url || 'on'],
           ['Paired', status.desktop?.paired ? 'yes' : 'no'],
           ['Active jobs', status.desktop?.activeJobs ?? 0],
+          ['Session started', status.desktop?.serverStartedAt ? new Date(status.desktop.serverStartedAt).toLocaleString() : 'n/a'],
+          ['Paired at', status.desktop?.pairedAt ? new Date(status.desktop.pairedAt).toLocaleString() : 'not paired'],
+          ['Last completed', status.desktop?.lastCompletedAt ? new Date(status.desktop.lastCompletedAt).toLocaleString() : 'n/a'],
+          ['Last failed', status.desktop?.lastFailedAt ? new Date(status.desktop.lastFailedAt).toLocaleString() : 'n/a'],
+          ['Last error', status.desktop?.lastError || 'none'],
           ['Pro unlocked', status.isPro ? 'yes' : 'no'],
           ['yt-dlp/ffmpeg', 'Available on phone']
         ];
@@ -407,7 +446,8 @@
           ['Active Jobs', metrics.activeJobs ?? 0],
           ['Total Jobs', metrics.totalJobs ?? 0],
           ['Completed', metrics.completedJobs ?? 0],
-          ['Failed', metrics.failedJobs ?? 0]
+          ['Failed', metrics.failedJobs ?? 0],
+          ['Success Rate', metrics.successRate == null ? 'n/a' : `${Number(metrics.successRate).toFixed(1)}%`]
         ].map(([label, value]) => `<div class="metric"><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>`).join('');
         const history = await api('/api/history');
         document.getElementById('historyList').innerHTML = (Array.isArray(history) ? history.slice(0, 6) : []).map(item => {
@@ -415,6 +455,14 @@
           return `<div class="status-row"><b>${escapeHtml(item.title || item.filename || 'Download')}</b><span>${escapeHtml(formatBytes(item.size || 0))}</span><br><a href="${fileUrl}" target="_blank">Open local link</a></div>`;
         }).join('') || '<div class="status-row"><span>No downloads yet</span></div>';
       } catch (e) {
+        document.getElementById('metricsGrid').innerHTML = [
+          ['Active Jobs', 'n/a'],
+          ['Total Jobs', 'n/a'],
+          ['Completed', 'n/a'],
+          ['Failed', 'n/a'],
+          ['Success Rate', 'metrics unavailable']
+        ].map(([label, value]) => `<div class="metric"><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>`).join('');
+        setSessionState(false);
         document.getElementById('pairScreen').classList.remove('hidden');
       }
     }
@@ -436,6 +484,7 @@
       const url = urlInput.value.trim();
       if (url && url !== lastFetchedUrl && !fetchInFlight) fetchInfo();
     });
+    setSessionState(!!token);
     refresh();
     syncModeControls();
     renderQuality();
