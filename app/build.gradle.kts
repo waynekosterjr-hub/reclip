@@ -30,8 +30,8 @@ android {
         applicationId = "com.reclip.app"
         minSdk = 24
         targetSdk = 34
-        versionCode = 3
-        versionName = "1.1.0-beta.2"
+        versionCode = 4
+        versionName = "1.1.0-beta.3"
 
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
@@ -88,7 +88,8 @@ chaquopy {
             buildPython(buildPythonPath)
         }
         pip {
-            install("yt-dlp")
+            // Pin the downloader so every beta build uses the reviewed release.
+            install("yt-dlp==2026.8.19")
         }
     }
 }

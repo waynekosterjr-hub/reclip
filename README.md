@@ -38,6 +38,16 @@
 
 ## 🛠️ Build (Windows)
 
+`1.1.0-beta.3` pins the bundled downloader to yt-dlp `2026.08.19`.
+This dependency update preserves the existing FFmpeg binaries, audio profiles,
+video format selection, Spotify adapter, and native download/history flow.
+It does not yet add a JavaScript runtime; full YouTube challenge support remains
+a separate follow-up, and updating yt-dlp alone does not guarantee every HTTP 403
+is resolved. See the [upstream runtime requirements](https://github.com/yt-dlp/yt-dlp/wiki/EJS).
+
+The Android build uses Python 3.11. Point `BUILD_PYTHON` at a local Python 3.11
+executable when another Python version is the system default.
+
 ```powershell
 .\gradlew.bat :app:assembleDebug
 .\gradlew.bat :app:installDebug
