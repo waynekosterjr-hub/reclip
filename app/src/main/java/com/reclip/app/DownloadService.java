@@ -30,11 +30,13 @@ public class DownloadService extends Service {
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOnlyAlertOnce(true)
             .setOngoing(ongoing);
-        if (indeterminate) {
-            b.setProgress(0, 0, true);
-        } else {
-            int clamped = Math.max(0, Math.min(100, progress));
-            b.setProgress(100, clamped, false);
+        if (ongoing) {
+            if (indeterminate) {
+                b.setProgress(0, 0, true);
+            } else {
+                int clamped = Math.max(0, Math.min(100, progress));
+                b.setProgress(100, clamped, false);
+            }
         }
         return b.build();
     }
@@ -49,15 +51,21 @@ public class DownloadService extends Service {
 
         if (ACTION_FINISH.equals(action)) {
             boolean success = intent != null && intent.getBooleanExtra(EXTRA_SUCCESS, false);
-            Notification done = buildNotification(
-                title,
-                text != null ? text : (success ? "Download complete" : "Download failed"),
-                success ? 100 : 0,
-                false,
-                false
-            );
-            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, done);
-            stopForeground(STOP_FOREGROUND_DETACH);
+            stopForeground(STOP_FOREGROUND_REMOVE);
+            if (success) {
+                // Successful jobs should leave no notification behind.
+                NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID);
+            } else {
+                // Keep failures visible, but make the notification dismissible.
+                Notification failed = buildNotification(
+                    title,
+                    text != null ? text : "Download failed",
+                    0,
+                    false,
+                    false
+                );
+                NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, failed);
+            }
             stopSelf();
             return START_NOT_STICKY;
         }

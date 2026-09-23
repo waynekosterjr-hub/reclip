@@ -20,6 +20,7 @@
 - 🎬 Video quality selection with saved preference
 - 🖥️ Desktop Mode (phone-hosted over LAN)
 - 📥 Unified download history across UI surfaces
+- 🧹 Successful download notifications clear automatically; failures stay dismissible
 - 🧪 Runtime diagnostics for engine transparency
 
 ## 🚀 What It Supports
