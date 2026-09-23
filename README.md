@@ -80,11 +80,11 @@ adb -t <transport_id> install -r app\build\outputs\apk\debug\app-debug.apk
 
 ## 📂 Key Files
 
-- Android entry: [MainActivity.java](C:/Users/micry/Documents/Codex/2026-05-16/pull-my-latest-update-on-from/app/src/main/java/com/reclip/app/MainActivity.java)
-- Desktop server: [DesktopServerManager.java](C:/Users/micry/Documents/Codex/2026-05-16/pull-my-latest-update-on-from/app/src/main/java/com/reclip/app/DesktopServerManager.java)
-- Desktop UI: [desktop.html](C:/Users/micry/Documents/Codex/2026-05-16/pull-my-latest-update-on-from/app/src/main/assets/www/desktop.html)
-- Mobile UI: [index.html](C:/Users/micry/Documents/Codex/2026-05-16/pull-my-latest-update-on-from/app/src/main/assets/www/index.html)
-- Engine: [reclip_engine.py](C:/Users/micry/Documents/Codex/2026-05-16/pull-my-latest-update-on-from/app/src/main/python/reclip_engine.py)
+- Android entry: [MainActivity.java](app/src/main/java/com/reclip/app/MainActivity.java)
+- Desktop server: [DesktopServerManager.java](app/src/main/java/com/reclip/app/DesktopServerManager.java)
+- Desktop UI: [desktop.html](app/src/main/assets/www/desktop.html)
+- Mobile UI: [index.html](app/src/main/assets/www/index.html)
+- Engine: [reclip_engine.py](app/src/main/python/reclip_engine.py)
 
 ## 📝 Release Workflow Note
 
